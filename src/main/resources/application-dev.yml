@@ -1,0 +1,19 @@
+server:
+  port: ${APPLICATION_PORT}
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+logging:
+  config: classpath:logback/logback-dev.xml
+  level:
+    joomidang.papersummary: trace
