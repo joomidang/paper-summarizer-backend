@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.4'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.asciidoctor.jvm.convert' version '4.0.4' // AsciiDoc 처리를 위한 플러그인
 }
 
 group = 'joomidang'
@@ -17,6 +18,7 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    asciidoctorExt
 }
 
 repositories {
@@ -30,9 +32,15 @@ dependencies {
     // Spring Data JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+    // Spring REST Docs
+    asciidoctorExt 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
     // H2
     runtimeOnly 'com.h2database:h2'
@@ -47,4 +55,53 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+ext {
+    activeProfile = project.hasProperty('spring.profiles.active') ? project.property('spring.profiles.active') : 'default'
+    snippetsDir = file('build/generated-snippets')
+}
+
+tasks.register('restDocsTest', Test) {
+    description = "Run only REST Docs related tests"
+    group = "verification"
+
+    outputs.dir snippetsDir
+
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching "*.docs.*"
+    }
+
+    onlyIf {
+        activeProfile != 'prod'
+    }
+}
+
+asciidoctor {
+    inputs.dir snippetsDir
+    configurations 'asciidoctorExt'
+
+    sources { // 특정 파일만 html로 만든다.
+        include("**/index.adoc", "**/enum/*.adoc")
+    }
+    baseDirFollowsSourceFile() // 다른 adoc 파일을 include 할 때 경로를 baseDir로 맞춘다.
+    dependsOn restDocsTest
+
+    outputDir = file("$buildDir/docs/asciidoc")
+
+    onlyIf {
+        activeProfile != 'prod'
+    }
+}
+
+bootJar {
+    archiveFileName = "${rootProject.name}.jar"
+
+    if (activeProfile != 'prod') {
+        dependsOn asciidoctor
+        from("${buildDir}/docs/asciidoc") {
+            into 'static/docs'
+        }
+    }
 }
