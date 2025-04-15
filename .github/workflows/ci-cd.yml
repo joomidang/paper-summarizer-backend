@@ -1,0 +1,147 @@
+name: Backend CI/CD
+
+on:
+  pull_request:
+    types: [ opened, synchronize, closed ]
+    branches: [ dev, main ]
+    paths:
+      - 'src/**'
+      - '.github/**'
+
+jobs:
+  test:
+    # PR 열리거나(PR 생성), 업데이트(푸시/수정)될때 실행
+    if: github.event.action == 'opened' || github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    environment: test
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+      - name: Set up jdk17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew\
+      - names: Execute test
+        env:
+          # test 패키지 하위 application.yml 민감 정보 추가
+          DB_DRIVER: "org.h2.Driver"
+          DB_URL: "jdbc:h2:mem:testdb;MODE=MYSQL"
+          DB_USERNAME: "sa"
+        run: ./gradlew test --info
+
+  set-environment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-environment.outputs.environment }}
+    steps:
+      - name: Set env
+        id: set-environment
+        run: |
+          echo "Target Branch -> ${{ github.base_ref }}"
+          echo "environment=dev" >> $GITHUB_OUTPUT
+          
+          if [[ ${{ github.base_ref }} == "main" ]]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+          fi
+      - name: Check env
+        run: echo "Current environment -> ${{ steps.set-environment.outputs.environment }}"
+
+  image-build:
+    runs-on: ubuntu-latest
+    needs: [ set-environment ]
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        environment: [ "${{ needs.set-environment.outputs.environment }}" ]
+    environment: ${{matrix.environment}}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+      - name: Set up jdk17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew\
+      - name: Build with gradle
+        run: ./gradlew bootJar -Pspring.profiles.active=${{ matrix.environment }} --info
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+      - name: Docker build & push
+        run: |
+          docker build --build-arg SPRINGBOOT_APP_PROFILE=${{ matrix.environment }} --platform linux/arm64 -f docker/Dockerfile --tag ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }} .
+          docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ set-environment, image-build ]
+    strategy:
+      matrix:
+        environment: [ "${{needs.set-environment.outputs.environment}}" ]
+    environment: ${{matrix.environment}}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v4
+      - name: Deploy new Spring Boot Application
+        id: deploy-status
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/project
+            
+            # create .env file
+            cat <<EOF > .env
+            # springboot-app environment
+            SPRINGBOOT_APP_IMAGE_REPOSITORY=${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}
+            SPRINGBOOT_APP_IMAGE_TAG=${{ github.sha }}
+            
+            # mysql environment
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_URL=${{ secrets.DB_URL }}
+            
+            # etc...
+            
+            # deploy with docker
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username ${{ secrets.AWS_REPOSITORY_ID }} --password-stdin ${{ secrets.ECR_REGISTRY }}
+            sudo docker-compose stop springboot-app
+            sudo docker-compose rm -f springboot-app
+            sudo docker images --filter=reference="*/springboot-app-${{ matrix.environment }}:*" -q | xargs -r sudo docker rmi -f
+            sudo docker-compose up -d springboot-app
+            
+            sudo rm -rf .env
+
+      - name: notify
+        if: always()
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          embed-title: "Backend 배포 결과 알려드립니다 😁"
+          embed-description: |
+            오늘은 퇴근할 수 있을까...
+            Environment : backend-${{ matrix.environment }}
+            Result : ${{ steps.deploy-status.outcome == 'success' && '✅ 성공!' || '❌ 실패!' }}
+          embed-color: ${{ steps.deploy-status.outcome == 'success' && '3066993' || '15158332' }}
