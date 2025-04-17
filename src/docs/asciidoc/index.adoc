@@ -65,12 +65,15 @@
 [[resources]]
 == API 목록
 
-[[health-check]]
-=== Health Check API
+include::common/common.adoc[leveloffset=+1]
 
-[[health-check-get]]
-==== 서버 상태 확인
+include::sample/sample.adoc[leveloffset=+1]
 
-`GET /api/health` 요청을 통해 서버 상태를 확인할 수 있습니다.
+[[enums]]
+== 공통 코드
 
-operation::health-check[snippets='http-request,http-response,response-fields']
+[[error-codes]]
+=== 에러 코드
+
+// TODO: Create error-codes.adoc file
+// include::enum/error-codes.adoc[leveloffset=+3]
