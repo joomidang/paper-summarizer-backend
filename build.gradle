@@ -89,8 +89,6 @@ asciidoctor {
     baseDirFollowsSourceFile() // 다른 adoc 파일을 include 할 때 경로를 baseDir로 맞춘다.
     dependsOn restDocsTest
 
-    outputDir = file("$buildDir/docs/asciidoc")
-
     onlyIf {
         activeProfile != 'prod'
     }
@@ -101,7 +99,7 @@ bootJar {
 
     if (activeProfile != 'prod') {
         dependsOn asciidoctor
-        from("${buildDir}/docs/asciidoc") {
+        from("${asciidoctor.outputDir}") {
             into 'static/docs'
         }
     }
