@@ -116,6 +116,7 @@ jobs:
             # springboot-app environment
             SPRINGBOOT_APP_IMAGE_REPOSITORY=${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}
             SPRINGBOOT_APP_IMAGE_TAG=${{ github.sha }}
+            ENVIRONMENT=${{ matrix.environment }}
             
             # mysql environment
             DB_NAME=${{ secrets.DB_NAME }}
@@ -123,10 +124,15 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_URL=${{ secrets.DB_URL }}
             
+            # AWS
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
             # etc...
+            EOF
             
             # deploy with docker
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username ${{ secrets.AWS_REPOSITORY_ID }} --password-stdin ${{ secrets.ECR_REGISTRY }}
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
             sudo docker-compose stop springboot-app
             sudo docker-compose rm -f springboot-app
             sudo docker images --filter=reference="*/springboot-app-${{ matrix.environment }}:*" -q | xargs -r sudo docker rmi -f
@@ -141,7 +147,7 @@ jobs:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           embed-title: "Backend 배포 결과 알려드립니다 😁"
           embed-description: |
-            오늘은 퇴근할 수 있을까...
+            캡스톤 다 끝낼 수 있을까?..
             Environment : backend-${{ matrix.environment }}
             Result : ${{ steps.deploy-status.outcome == 'success' && '✅ 성공!' || '❌ 실패!' }}
           embed-color: ${{ steps.deploy-status.outcome == 'success' && '3066993' || '15158332' }}
