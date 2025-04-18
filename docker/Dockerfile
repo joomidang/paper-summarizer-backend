@@ -1,6 +1,6 @@
 FROM amazoncorretto:17
 
-ARG JAR_FILE=build/lib/paper-summary.jar
+ARG JAR_FILE=build/libs/paper-summary.jar
 COPY ${JAR_FILE} .
 
 ARG SPRINGBOOT_APP_PROFILE
