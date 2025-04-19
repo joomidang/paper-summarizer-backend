@@ -251,4 +251,4 @@ RestDocsSupport를 사용하여 다음과 같은 스니펫을 생성할 수 있�
 - src/docs/asciidoc에 있는 .adoc 파일들을 읽고 스니펫들을 포함하여 html 파일로 변환합니다.
 
 3. 생성된 문서 확인:
-    - `build/docs/asciidoc` html 파일 확인함.
+    - `build/docs/asciidoc` html 파일 확인함
