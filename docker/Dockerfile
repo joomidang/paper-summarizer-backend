@@ -1,4 +1,4 @@
-FROM amazoncorretto:17
+FROM openjdk:17-slim
 
 ARG JAR_FILE=build/libs/paper-summary.jar
 COPY ${JAR_FILE} .
