@@ -1,0 +1,13 @@
+===== Query Parameters
+|===
+|설명|파라미터명|필수여부|제약조건
+
+{{#parameters}}
+
+|{{#tableCellContent}}{{description}}{{/tableCellContent}}
+|{{#tableCellContent}}`+{{name}}+`{{/tableCellContent}}
+|{{#tableCellContent}}{{#optional}}X{{/optional}}{{^optional}}O{{/optional}}{{/tableCellContent}}
+|{{#tableCellContent}}{{#constraints}}{{.}}{{/constraints}}{{/tableCellContent}}
+
+{{/parameters}}
+|===

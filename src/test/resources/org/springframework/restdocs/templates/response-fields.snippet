@@ -1,0 +1,14 @@
+===== Response Fields
+|===
+|설명|경로|타입|공백 여부
+
+{{#fields}}
+
+|{{#tableCellContent}}{{description}}{{/tableCellContent}}
+|{{#tableCellContent}}`+{{path}}+`{{/tableCellContent}}
+|{{#tableCellContent}}`+{{type}}+`{{/tableCellContent}}
+|{{#tableCellContent}}{{#optional}}O{{/optional}}{{^optional}}X{{/optional}}{{/tableCellContent}}
+
+{{/fields}}
+
+|===
