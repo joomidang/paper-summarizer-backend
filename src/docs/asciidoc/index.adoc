@@ -1,79 +1,17 @@
+ifndef::snippets[]
+:snippets: ../../build/generated-snippets
+endif::[]
 = GPT 기반 AI 논문 요약 및 시각화 플랫폼 API 문서
 :doctype: book
 :icons: font
 :source-highlighter: highlightjs
 :toc: left
-:toclevels: 3
+:toclevels: 2
 :sectlinks:
-:operation-curl-request-title: Example request
-:operation-http-response-title: Example response
+ifndef::docinfodir[]
+:docinfodir: ./common
+endif::[]
+:docinfo: shared-head
 
-[[overview]]
-== 개요
-
-이 문서는 GPT 기반 AI 논문 요약 및 시각화 플랫폼의 API에 대한 문서입니다.
-
-[[overview-http-verbs]]
-=== HTTP 메소드
-
-이 API에서 사용하는 HTTP 메소드는 다음과 같습니다:
-
-|===
-| 메소드 | 설명
-
-| `GET`
-| 리소스를 조회합니다.
-
-| `POST`
-| 새 리소스를 생성합니다.
-
-| `PUT`
-| 기존 리소스를 수정합니다.
-
-| `DELETE`
-| 기존 리소스를 삭제합니다.
-|===
-
-[[overview-http-status-codes]]
-=== HTTP 상태 코드
-
-|===
-| 상태 코드 | 설명
-
-| `200 OK`
-| 요청이 성공적으로 처리되었습니다.
-
-| `201 Created`
-| 새 리소스가 성공적으로 생성되었습니다.
-
-| `400 Bad Request`
-| 잘못된 요청입니다.
-
-| `401 Unauthorized`
-| 인증이 필요합니다.
-
-| `403 Forbidden`
-| 권한이 없습니다.
-
-| `404 Not Found`
-| 리소스를 찾을 수 없습니다.
-
-| `500 Internal Server Error`
-| 서버 오류가 발생했습니다.
-|===
-
-[[resources]]
-== API 목록
-
-include::common/common.adoc[leveloffset=+1]
-
-include::sample/sample.adoc[leveloffset=+1]
-
-[[enums]]
-== 공통 코드
-
-[[error-codes]]
-=== 에러 코드
-
-// TODO: Create error-codes.adoc file
-// include::enum/error-codes.adoc[leveloffset=+3]
+include::common/overview.adoc[]
+include::sample/sample.adoc[]
