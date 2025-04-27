@@ -32,6 +32,10 @@ jobs:
           DB_DRIVER: "org.h2.Driver"
           DB_URL: "jdbc:h2:mem:testdb;MODE=MYSQL"
           DB_USERNAME: "sa"
+          # JWT & OAuth 테스트 환경 변수
+          JWT_SECRET: "jwtSecretKeyForTestingPurposesOnlyDoNotUseInProduction"
+          GITHUB_CLIENT_ID: "test-client-id"
+          GITHUB_CLIENT_SECRET: "test-client-secret"
         run: ./gradlew test --info
 
   set-environment:
@@ -123,6 +127,12 @@ jobs:
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_URL=${{ secrets.DB_URL }}
+            
+            # JWT & OAuth 환경 변수
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            GITHUB_CLIENT_ID=${{ secrets.CLIENT_ID_GITHUB }}
+            GITHUB_CLIENT_SECRET=${{ secrets.CLIENT_SECRET_GITHUB }}
+            GITHUB_REDIRECT_URI=${{ secrets.REDIRECT_URI_GITHUB }}
             
             # AWS
             AWS_REGION=${{ secrets.AWS_REGION }}

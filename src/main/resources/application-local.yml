@@ -20,6 +20,23 @@ spring:
       settings:
         web-allow-others: false
 
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:your-github-client-secret}
+            redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8080/api/auth/github/callback}
+            scope:
+              - user:email
+              - read:user
+
+jwt:
+  secret: ${JWT_SECRET:localDevelopmentSecretKeyThatShouldBeAtLeast32CharactersLong}
+  access-token-validity-in-seconds: 86400 # 24 hours
+  refresh-token-validity-in-seconds: 604800 # 7 days
+
 logging:
   config: classpath:logback/logback-local.xml
   level:
