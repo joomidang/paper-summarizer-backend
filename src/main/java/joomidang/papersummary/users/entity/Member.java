@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "member", indexes = {
         @Index(name = "idx_email", columnList = "email"),
-        @Index(name = "idx_username", columnList = "username"),
+        @Index(name = "idx_name", columnList = "name"),
         @Index(name = "idx_auth_provider_uid", columnList = "auth_provider, provider_uid")
 })
 @Getter
