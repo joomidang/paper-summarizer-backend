@@ -101,26 +101,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private Member saveOrUpdateMember(Member memberDetails) {
-        // 제공자와 제공자 UID로 사용자가 존재하는지 확인
-        try {
-            Member existingMember = memberService.exists(memberDetails.getAuthProvider(),
-                    memberDetails.getProviderUid());
-
-            // 기존 사용자 업데이트
-            existingMember.updateProfile(
-                    memberDetails.getName(),
-                    memberDetails.getEmail(),
-                    memberDetails.getProfileImage()
-            );
-            existingMember.updateLastLoginAt();
-            log.info("Updating existing user with provider ID: {}", memberDetails.getProviderUid());
-
-            return memberService.save(existingMember);
-        } catch (Exception e) {
-            // 새 사용자 생성
-            log.info("Creating new user with provider ID: {}", memberDetails.getProviderUid());
-            return memberService.save(memberDetails);
-        }
+        return memberService.saveOrUpdate(memberDetails);
     }
 
     private Authentication createAuthentication(Member member) {
