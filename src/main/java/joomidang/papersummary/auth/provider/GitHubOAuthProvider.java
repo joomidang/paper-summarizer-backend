@@ -1,5 +1,6 @@
 package joomidang.papersummary.auth.provider;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,7 @@ public class GitHubOAuthProvider implements OAuthProvider {
     private static final String GITHUB_EMAILS_URL = "https://api.github.com/user/emails";
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${spring.security.oauth2.client.registration.github.client-id}")
     private String clientId;
@@ -156,8 +158,8 @@ public class GitHubOAuthProvider implements OAuthProvider {
         String email = (String) userInfo.get("email");
         String profileImage = (String) userInfo.get("avatar_url");
 
-        // provider_data 필드를 위해 GitHub 사용자 정보를 문자열로 변환
-        String providerData = userInfo.toString();
+        // provider_data: Map -> JSON 변환
+        String providerData = parseProviderData(userInfo);
 
         // 이름이 null인 경우 로그인을 사용자 이름으로 사용
         String username = (name != null && !name.isEmpty()) ? name : login;
@@ -173,6 +175,11 @@ public class GitHubOAuthProvider implements OAuthProvider {
                 .providerData(providerData)
                 .role(Role.USER)
                 .build();
+    }
+
+    @Override
+    public AuthProvider getProviderType() {
+        return AuthProvider.GITHUB;
     }
 
     private <T> T makeApiRequest(String url, HttpMethod method, String accessToken,
@@ -247,8 +254,14 @@ public class GitHubOAuthProvider implements OAuthProvider {
         return null;
     }
 
-    @Override
-    public AuthProvider getProviderType() {
-        return AuthProvider.GITHUB;
+    private String parseProviderData(Map<String, Object> userInfo) {
+        String providerData;
+        try {
+            providerData = objectMapper.writeValueAsString(userInfo);
+        } catch (Exception e) {
+            log.error("GitHub 사용자 정보 JSON 변환 실패", e);
+            providerData = "{}"; // 실패해도 빈 JSON으로
+        }
+        return providerData;
     }
 }
