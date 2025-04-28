@@ -20,7 +20,6 @@ import joomidang.papersummary.auth.dto.TokenDto;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.service.AuthService;
 import joomidang.papersummary.users.entity.AuthProvider;
-import joomidang.papersummary.users.entity.Member;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -74,8 +73,8 @@ public class AuthControllerTest {
 
         // 테스트에 사용할 토큰 DTO 생성
         tokenDto = TokenDto.builder()
-                .accessToken("test-access-token")
-                .refreshToken("test-refresh-token")
+                .accessToken("test_access_token")
+                .refreshToken("test_refresh_token")
                 .tokenType("Bearer")
                 .expiresIn(3600L)
                 .build();
