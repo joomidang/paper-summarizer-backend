@@ -46,7 +46,7 @@ public class AuthControllerDocumentation extends RestDocsSupport {
         );
 
         // then
-        result.andExpect(status().isOk())
+        result.andExpect(status().isFound())
                 .andDo(createDocument(
                         responseHeaders(
                                 headerWithName("Location").description("깃허브 인증 페이지 URL")
