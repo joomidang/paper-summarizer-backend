@@ -7,3 +7,15 @@ spring:
     url: ${DB_URL:jdbc:h2:mem:testdb}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:sa}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            redirect-uri: http://localhost:8080/api/auth/github/callback
+            scope:
+              - user:email
+              - read:user

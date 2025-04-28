@@ -13,6 +13,23 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${CLIENT_ID_GITHUB}
+            client-secret: ${CLIENT_SECRET_GITHUB}
+            redirect-uri: ${REDIRECT_URI_GITHUB:http://localhost:8080/api/auth/github/callback}
+            scope:
+              - user:email
+              - read:user
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-in-seconds: 86400 # 24 hours
+  refresh-token-validity-in-seconds: 604800 # 7 days
+
 logging:
   config: classpath:logback/logback-dev.xml
   level:
