@@ -15,3 +15,4 @@ endif::[]
 
 include::common/overview.adoc[]
 include::sample/sample.adoc[]
+include::auth/auth.adoc[]

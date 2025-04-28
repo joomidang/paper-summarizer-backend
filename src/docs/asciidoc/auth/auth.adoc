@@ -1,0 +1,30 @@
+[[auth-api]]
+== Auth API
+
+[[github-login]]
+=== 깃허브 로그인
+
+`GET /api/auth/github` 요청을 통해 github OAuth 제공자에 대한 인증 URL 반환 합니다.
+
+operation::auth-controller-documentation/github-login[snippets='http-request,http-response,response-headers']
+
+[[github-callback]]
+=== 깃허브 콜백
+
+`GET /api/auth/github/callback` 요청을 통해 깃허브 인증 코드를 처리하고 토큰을 발급받습니다.
+
+operation::auth-controller-documentation/github-callback[snippets='http-request,query-parameters,http-response,response-fields']
+
+[[withdraw-account]]
+=== 회원 탈퇴
+
+`DELETE /api/auth/withdraw` 요청을 통해 회원 탈퇴를 진행합니다.
+
+operation::auth-controller-documentation/withdraw-account[snippets='http-request,request-fields,http-response,response-fields']
+
+[[refresh-token]]
+=== 토큰 갱신
+
+`POST /api/auth/refresh` 요청을 통해 만료된 액세스 토큰을 갱신합니다.
+
+operation::auth-controller-documentation/refresh-token[snippets='http-request,request-fields,http-response,response-fields']
