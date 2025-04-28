@@ -73,8 +73,8 @@ public class AuthControllerTest {
 
         // 테스트에 사용할 토큰 DTO 생성
         tokenDto = TokenDto.builder()
-                .accessToken("test_access_token")
-                .refreshToken("test_refresh_token")
+                .accessToken("test-access-token")
+                .refreshToken("test-refresh-token")
                 .tokenType("Bearer")
                 .expiresIn(3600L)
                 .build();

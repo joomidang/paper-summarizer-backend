@@ -59,8 +59,8 @@ public class AuthControllerDocumentation extends RestDocsSupport {
     void githubCallback() throws Exception {
         // given
         TokenDto tokenDto = TokenDto.builder()
-                .accessToken("test_access_token")
-                .refreshToken("test_refresh_token")
+                .accessToken("test-access-token")
+                .refreshToken("test-refresh-token")
                 .tokenType("Bearer")
                 .expiresIn(3600L)
                 .build();
@@ -136,13 +136,13 @@ public class AuthControllerDocumentation extends RestDocsSupport {
     void refreshToken() throws Exception {
         // given
         TokenDto tokenDto = TokenDto.builder()
-                .accessToken("test_access_token")
-                .refreshToken("test_refresh_token")
+                .accessToken("test-access-token")
+                .refreshToken("test-refresh-token")
                 .tokenType("Bearer")
                 .expiresIn(3600L)
                 .build();
 
-        TokenRefreshRequest request = new TokenRefreshRequest("test_refresh_token");
+        TokenRefreshRequest request = new TokenRefreshRequest("test-refresh-token");
         String requestBody = convertToJson(request);
 
         Mockito.when(authService.refreshToken(Mockito.anyString()))
