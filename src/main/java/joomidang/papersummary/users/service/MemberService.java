@@ -37,4 +37,9 @@ public class MemberService {
         return memberRepository.findByAuthProviderAndProviderUid(provider, providerUid)
                 .orElseThrow(() -> new MemberNotFoundException("사용자를 찾을 수 없습니다."));
     }
+
+    public Member findByProviderUid(final String providerUid) {
+        return memberRepository.findByProviderUid(providerUid)
+                .orElseThrow(() -> new MemberNotFoundException("사용자를 찾을 수 없습니다."));
+    }
 }
