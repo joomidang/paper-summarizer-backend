@@ -4,6 +4,7 @@ import static joomidang.papersummary.auth.controller.response.AuthSuccessCode.LO
 import static joomidang.papersummary.auth.controller.response.AuthSuccessCode.TOKEN_REFRESH;
 import static joomidang.papersummary.auth.controller.response.AuthSuccessCode.WITHDRAW;
 
+import java.net.URI;
 import joomidang.papersummary.auth.controller.request.TokenRefreshRequest;
 import joomidang.papersummary.auth.controller.request.WithdrawRequest;
 import joomidang.papersummary.auth.dto.TokenDto;
@@ -13,6 +14,7 @@ import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.users.entity.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +35,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> githubLogin() {
         log.info("깃허브 로그인 요청");
         String redirectUrl = authService.getAuthorizationUrl(AuthProvider.GITHUB);
-        return ResponseEntity.ok().header("Location", redirectUrl).build();
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
     }
 
     @GetMapping("/github/callback")
@@ -43,7 +45,7 @@ public class AuthController {
         return ResponseEntity.ok()
                 .body(ApiResponse.successWithData(LOGIN, tokenDto));
     }
-    
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenDto>> refreshToken(
             @RequestBody TokenRefreshRequest request) {
