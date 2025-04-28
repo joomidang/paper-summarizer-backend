@@ -1,5 +1,6 @@
 package joomidang.papersummary.auth.provider;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import joomidang.papersummary.users.entity.AuthProvider;
@@ -41,6 +42,7 @@ public class GitHubOAuthProvider implements OAuthProvider {
                 .queryParam("client_id", clientId)
                 .queryParam("redirect_uri", redirectUri)
                 .queryParam("scope", "user:email read:user")
+                .encode(StandardCharsets.UTF_8)
                 .build()
                 .toUriString();
     }
