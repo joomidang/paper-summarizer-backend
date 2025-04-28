@@ -91,7 +91,7 @@ public class AuthControllerTest {
         mockMvc.perform(get("/api/auth/github")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isFound())
                 .andExpect(header().string("Location", redirectUrl));
     }
 
