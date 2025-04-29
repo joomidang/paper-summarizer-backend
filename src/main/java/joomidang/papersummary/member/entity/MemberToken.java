@@ -1,4 +1,4 @@
-package joomidang.papersummary.users.entity;
+package joomidang.papersummary.member.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,12 +21,12 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "member_token", indexes = {
-        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_member_id", columnList = "member_id"),
         @Index(name = "idx_token_expires_at", columnList = "token_expires_at")
 })
 @Getter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class MemberToken {
 
@@ -35,7 +35,7 @@ public class MemberToken {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
     @Column(name = "access_token_enc", columnDefinition = "text")

@@ -1,8 +1,8 @@
-package joomidang.papersummary.users.repository;
+package joomidang.papersummary.member.repository;
 
 import java.util.Optional;
-import joomidang.papersummary.users.entity.Member;
-import joomidang.papersummary.users.entity.AuthProvider;
+import joomidang.papersummary.member.entity.AuthProvider;
+import joomidang.papersummary.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

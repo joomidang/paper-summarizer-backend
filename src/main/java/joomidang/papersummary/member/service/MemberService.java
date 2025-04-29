@@ -1,10 +1,10 @@
-package joomidang.papersummary.users.service;
+package joomidang.papersummary.member.service;
 
 import java.util.Optional;
-import joomidang.papersummary.users.entity.AuthProvider;
-import joomidang.papersummary.users.entity.Member;
-import joomidang.papersummary.users.exception.MemberNotFoundException;
-import joomidang.papersummary.users.repository.MemberRepository;
+import joomidang.papersummary.member.entity.AuthProvider;
+import joomidang.papersummary.member.entity.Member;
+import joomidang.papersummary.member.exception.MemberNotFoundException;
+import joomidang.papersummary.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

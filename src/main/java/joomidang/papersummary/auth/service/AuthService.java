@@ -2,7 +2,7 @@ package joomidang.papersummary.auth.service;
 
 import joomidang.papersummary.auth.controller.request.WithdrawRequest;
 import joomidang.papersummary.auth.dto.TokenDto;
-import joomidang.papersummary.users.entity.AuthProvider;
+import joomidang.papersummary.member.entity.AuthProvider;
 
 public interface AuthService {
     /**

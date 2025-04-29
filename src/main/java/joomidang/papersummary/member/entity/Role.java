@@ -1,4 +1,4 @@
-package joomidang.papersummary.users.entity;
+package joomidang.papersummary.member.entity;
 
 /**
  * 사용자 역할 열거형

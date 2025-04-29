@@ -1,4 +1,4 @@
-package joomidang.papersummary.users.entity;
+package joomidang.papersummary.member.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -62,12 +62,6 @@ public class Member extends BaseTimeEntity {
 
     @Column(name = "provider_uid", length = 120)
     private String providerUid;
-
-    /**
-     * 인증 제공자에서 제공하는 추가 데이터 (JSON 형식)
-     */
-    @Column(name = "provider_data", columnDefinition = "json")
-    private String providerData;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

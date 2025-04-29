@@ -1,4 +1,4 @@
-package joomidang.papersummary.users.entity;
+package joomidang.papersummary.member.entity;
 
 /**
  * 인증 제공자 열거형
