@@ -39,7 +39,7 @@ public class PaperService {
     /**
      * PDF 파일을 업로드하고 Paper 엔티티 생성
      *
-     * @param file 업로드할 PDF 파일
+     * @param file        업로드할 PDF 파일
      * @param providerUid 사용자 식별자
      * @return 저장된 Paper 엔티티
      * @throws InvalidFileTypeException PDF가 아닌 파일이 업로드된 경우
@@ -102,7 +102,6 @@ public class PaperService {
         log.info("Paper 엔티티 생성 및 저장 중: {}", file.getOriginalFilename());
         Paper paper = Paper.builder()
                 .title(null) // 메타데이터 없이 저장
-                .publicationDate(null) // 메타데이터 없이 저장
                 .filePath(s3Url)
                 .fileType(file.getContentType())
                 .fileSize(file.getSize())

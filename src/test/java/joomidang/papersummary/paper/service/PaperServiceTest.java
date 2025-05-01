@@ -71,7 +71,6 @@ public class PaperServiceTest {
         Paper mockPaper = Paper.builder()
                 .id(1L)
                 .title(null)
-                .publicationDate(null)
                 .filePath(s3Url)
                 .fileType("application/pdf")
                 .fileSize(file.getSize())

@@ -11,7 +11,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.util.Date;
 import joomidang.papersummary.common.audit.entity.BaseTimeEntity;
 import joomidang.papersummary.member.entity.Member;
 import lombok.AllArgsConstructor;
@@ -27,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 @Entity
 @Table(name = "paper", indexes = {
         @Index(name = "idx_title", columnList = "title"),
-        @Index(name = "idx_publication_date", columnList = "publication_date"),
         @Index(name = "idx_member_id", columnList = "member_id")
 })
 @Getter
@@ -41,9 +39,6 @@ public class Paper extends BaseTimeEntity {
 
     @Column(length = 500)
     private String title;
-
-    @Column(name = "publication_date")
-    private Date publicationDate;
 
     @Column(name = "file_path", nullable = false, length = 500)
     private String filePath;
@@ -78,5 +73,9 @@ public class Paper extends BaseTimeEntity {
      */
     public void delete() {
         this.isDeleted = true;
+    }
+
+    public boolean hasNotPermission(Long requesterId) {
+        return member.isNotSame(requesterId);
     }
 }
