@@ -20,6 +20,12 @@ spring:
       settings:
         web-allow-others: false
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
   security:
     oauth2:
       client:
