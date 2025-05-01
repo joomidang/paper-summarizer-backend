@@ -1,12 +1,23 @@
 package joomidang.papersummary.paper.infra;
 
-import joomidang.papersummary.common.config.rabbitmq.PaperEvent;
+import joomidang.papersummary.common.config.rabbitmq.PaperEventEnvelop;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventPublisher;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventType;
+import joomidang.papersummary.common.config.rabbitmq.payload.SummaryRequestedPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+
+/**
+ * 파싱 요청 테스트용 클라이언트
+ * <p>
+ * 실제 외부 파싱 서버가 없는 로컬 환경에서 사용.
+ * <p>
+ * 파싱 요청이 들어오면 MinerU 대신 즉시 SUMMARY_REQUESTED 이벤트를 발행하여
+ * <p>
+ * 다음 흐름(요약 생성)을 테스트할 수 있게 한다.
+ */
 
 @Slf4j
 @Profile("local")
@@ -19,6 +30,12 @@ public class FakeParsingClient implements ParsingClient {
     public void requestParsing(Long paperId, Long userId, String url) {
         log.info("minerU 파싱 요청 시뮬레이션: paperId={}, url={}", paperId, url);
 
-        paperEventPublisher.publish(new PaperEvent(PaperEventType.PARSING_REQUESTED, paperId));
+        SummaryRequestedPayload payload = new SummaryRequestedPayload(
+                paperId,
+                "https://fake-bucket.com/papers/" + paperId + "/summary.md",
+                "이 논문을 요약해주세요.",
+                "ko"
+        );
+        paperEventPublisher.publish(new PaperEventEnvelop<>(PaperEventType.PARSING_REQUESTED, payload));
     }
 }

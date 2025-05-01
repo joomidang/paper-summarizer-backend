@@ -78,4 +78,8 @@ public class Paper extends BaseTimeEntity {
     public boolean hasNotPermission(Long requesterId) {
         return member.isNotSame(requesterId);
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
 }

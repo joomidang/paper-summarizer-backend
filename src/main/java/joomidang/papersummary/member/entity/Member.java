@@ -81,4 +81,8 @@ public class Member extends BaseTimeEntity {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
     }
+
+    public boolean isNotSame(Long requesterId) {
+        return !id.equals(requesterId);
+    }
 }
