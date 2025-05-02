@@ -3,7 +3,7 @@ package joomidang.papersummary.paper.infra;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventEnvelop;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventPublisher;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventType;
-import joomidang.papersummary.common.config.rabbitmq.payload.SummaryRequestedPayload;
+import joomidang.papersummary.common.config.rabbitmq.payload.ParsingRequestedPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -27,15 +27,9 @@ public class FakeParsingClient implements ParsingClient {
     private final PaperEventPublisher paperEventPublisher;
 
     @Override
-    public void requestParsing(Long paperId, Long userId, String url) {
-        log.info("minerU 파싱 요청 시뮬레이션: paperId={}, url={}", paperId, url);
-
-        SummaryRequestedPayload payload = new SummaryRequestedPayload(
-                paperId,
-                "https://fake-bucket.com/papers/" + paperId + "/summary.md",
-                "이 논문을 요약해주세요.",
-                "ko"
-        );
-        paperEventPublisher.publish(new PaperEventEnvelop<>(PaperEventType.PARSING_REQUESTED, payload));
+    public void requestParsing(ParsingRequestedPayload payload) {
+        log.info("minerU 파싱 요청 시뮬레이션: paperId={}, url={}", payload.paperId(), payload.s3Url());
+        //실제 RealParsingClient에서는 이렇게 사용하면 안됨 그냥 minerU client를 만들어서 호출을 보내야함
+        paperEventPublisher.publish(new PaperEventEnvelop<>(PaperEventType.SUMMARY_REQUESTED, payload));
     }
 }

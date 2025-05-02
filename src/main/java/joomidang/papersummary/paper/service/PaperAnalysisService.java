@@ -45,7 +45,7 @@ public class PaperAnalysisService {
             throw new AccessDeniedException();
         }
 
-        //TODO: 추후에 prompt, language 저장해서 api 요청 보낼때 활용
+        //TODO: 추후에 prompt, language redis 저장해서 api 요청 보낼때 활용
         log.info("PARSING_REQUESTED 이벤트 발행 -> paperId={}, prompt={}", paperId, prompt);
         ParsingRequestedPayload payload = new ParsingRequestedPayload(
                 paper.getId(),
