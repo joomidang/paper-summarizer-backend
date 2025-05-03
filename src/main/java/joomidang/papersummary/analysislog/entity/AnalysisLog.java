@@ -75,15 +75,16 @@ public class AnalysisLog extends BaseTimeEntity {
     private AnalysisSourceType sourceType;
 
     /**
-     * 분석 완료 처리
+     * 각 단계별 완료 처리
      */
     public void complete() {
         this.status = AnalysisStatus.SUCCESS;
         this.completedAt = LocalDateTime.now();
+        this.errorMessage = null;
     }
 
     /**
-     * 분석 실패 처리
+     * 각 단계별 실패 처리
      *
      * @param errorMessage 실패 사유
      */
