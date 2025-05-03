@@ -1,39 +1,55 @@
 package joomidang.papersummary.s3.service;
 
+import java.io.IOException;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 /**
  * S3 파일 업로드 서비스 구현체
- * <p>
- * 참고: 실제 AWS S3 연동을 위해서는 AWS SDK 의존성 추가 필요 implementation
- * 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class S3ServiceImpl implements S3Service {
 
-    // TODO: AWS S3 설정 추가 필요
+    private final S3Client s3Client;
+
+    @Value("${aws.s3.bucket-name}")
+    private String bucketName;
 
     @Override
     public String uploadFile(MultipartFile file, String dirName) {
         // 파일명 생성 (UUID 사용)
-        String originalFilename = file.getOriginalFilename();
-        String filename = UUID.randomUUID() + "_" + originalFilename;
+        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String key = dirName + "/" + filename;
 
-        // TODO: 실제 S3 업로드 로직 구현 필요
-        // 현재는 임시 URL 반환
-        log.info("파일 업로드: {}", filename);
-
-        // 임시 S3 URL 형식 반환
-        return "https://paper-summary-bucket.s3.amazonaws.com/" + dirName + "/" + filename;
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .build();
+            s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            return "https://" + bucketName + ".s3.amazonaws.com/" + key;
+        } catch (IOException e) {
+            throw new RuntimeException("s3 업로드 실패", e);
+        }
     }
 
     @Override
     public void deleteFile(String fileUrl) {
-        // TODO: 실제 S3 파일 삭제 로직 구현 필요
-        log.info("파일 삭제: {}", fileUrl);
+        String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build());
     }
 }
