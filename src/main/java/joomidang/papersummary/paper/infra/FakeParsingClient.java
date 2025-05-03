@@ -1,8 +1,6 @@
 package joomidang.papersummary.paper.infra;
 
-import joomidang.papersummary.common.config.rabbitmq.PaperEventEnvelop;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventPublisher;
-import joomidang.papersummary.common.config.rabbitmq.PaperEventType;
 import joomidang.papersummary.common.config.rabbitmq.payload.ParsingRequestedPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +28,6 @@ public class FakeParsingClient implements ParsingClient {
     public void requestParsing(ParsingRequestedPayload payload) {
         log.info("minerU 파싱 요청 시뮬레이션: paperId={}, url={}", payload.paperId(), payload.s3Url());
         //실제 RealParsingClient에서는 이렇게 사용하면 안됨 그냥 minerU client를 만들어서 호출을 보내야함
-        paperEventPublisher.publish(new PaperEventEnvelop<>(PaperEventType.SUMMARY_REQUESTED, payload));
+        //paperEventPublisher.publish(new PaperEventEnvelop<>(PaperEventType.SUMMARY_REQUESTED, payload));
     }
 }
