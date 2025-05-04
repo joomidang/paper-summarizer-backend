@@ -30,14 +30,26 @@ public class PaperAnalysisController {
             @PathVariable Long paperId,
             @RequestBody(required = false) AnalysisRequest request) {
 
-        log.info("분석 요청 시작 : paperId={}, providerUid={}", paperId, providerUid);
+        log.info("논문 분석 요청 시작: paperId={}, providerUid={}", paperId, providerUid);
+        log.debug("분석 요청 컨트롤러 진입: paperId={}, request={}", paperId, request);
 
-        paperAnalysisService.requestParsing(paperId, providerUid, request.prompt(), request.language());
+        // 요청이 null인 경우 기본값 사용
+        String prompt = request != null ? request.prompt() : " ";
+        String language = request != null ? request.language() : "ko";
+        log.debug("분석 파라미터 설정: prompt='{}', language={}", prompt, language);
 
-        return ResponseEntity.accepted()
-                .body(ApiResponse.successWithData(
-                        ANALYSIS_REQUESTED_SUCCESS,
-                        new AnalysisResponse(paperId, "파싱 요청 완료")
-                ));
+        try {
+            paperAnalysisService.requestParsing(paperId, providerUid, prompt, language);
+            log.info("논문 분석 요청 처리 완료: paperId={}", paperId);
+
+            return ResponseEntity.accepted()
+                    .body(ApiResponse.successWithData(
+                            ANALYSIS_REQUESTED_SUCCESS,
+                            new AnalysisResponse(paperId, "파싱 요청 완료")
+                    ));
+        } catch (Exception e) {
+            log.error("논문 분석 요청 처리 실패: paperId={}, 오류={}", paperId, e.getMessage(), e);
+            throw e;
+        }
     }
 }

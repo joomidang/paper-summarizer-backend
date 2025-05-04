@@ -29,7 +29,18 @@ public class PaperParsingConsumer {
 
     @RabbitListener(queues = RabbitMQConfig.PARSING_QUEUE)
     public void consume(PaperEventEnvelop<ParsingRequestedPayload> event) {
-        log.info("파싱 요청 이벤트 수신: paperId={}", event.payload().paperId());
-        parsingClient.requestParsing(event.payload());
+        ParsingRequestedPayload payload = event.payload();
+        log.info("파싱 요청 이벤트 수신: paperId={}, userId={}, s3Url={}", 
+                payload.paperId(), payload.userId(), payload.s3Url());
+
+        try {
+            log.debug("외부 파싱 서버로 요청 전송 시작: paperId={}", payload.paperId());
+            parsingClient.requestParsing(payload);
+            log.info("파싱 요청 처리 완료: paperId={}", payload.paperId());
+        } catch (Exception e) {
+            log.error("파싱 요청 처리 중 오류 발생: paperId={}, 오류={}", 
+                    payload.paperId(), e.getMessage(), e);
+            throw e;
+        }
     }
 }

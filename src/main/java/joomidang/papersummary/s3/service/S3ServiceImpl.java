@@ -2,6 +2,7 @@ package joomidang.papersummary.s3.service;
 
 import java.io.IOException;
 import java.util.UUID;
+import joomidang.papersummary.paper.exception.FileUploadFailedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,29 +28,56 @@ public class S3ServiceImpl implements S3Service {
 
     @Override
     public String uploadFile(MultipartFile file, String dirName) {
+        log.info("S3 파일 업로드 시작: 파일명={}, 디렉토리={}", file.getOriginalFilename(), dirName);
+
         // 파일명 생성 (UUID 사용)
         String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
         String key = dirName + "/" + filename;
+        log.debug("생성된 S3 키: {}", key);
 
         try {
+            log.debug("S3 PutObjectRequest 생성: bucket={}, key={}, contentType={}", 
+                    bucketName, key, file.getContentType());
+
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(key)
                     .contentType(file.getContentType())
                     .build();
+
+            log.debug("S3 putObject 요청 실행: fileSize={}", file.getSize());
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            return "https://" + bucketName + ".s3.amazonaws.com/" + key;
+
+            String fileUrl = "https://" + bucketName + ".s3.amazonaws.com/" + key;
+            log.info("S3 파일 업로드 완료: fileUrl={}", fileUrl);
+            return fileUrl;
         } catch (IOException e) {
-            throw new RuntimeException("s3 업로드 실패", e);
+            log.error("S3 파일 업로드 실패: 파일명={}, 오류={}", file.getOriginalFilename(), e.getMessage(), e);
+            throw new FileUploadFailedException(e.getMessage());
         }
     }
 
     @Override
     public void deleteFile(String fileUrl) {
-        String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
-        s3Client.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .build());
+        log.info("S3 파일 삭제 시작: fileUrl={}", fileUrl);
+
+        try {
+            String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
+            log.debug("추출된 S3 키: {}", key);
+
+            log.debug("S3 DeleteObjectRequest 생성: bucket={}, key={}", bucketName, key);
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+
+            log.debug("S3 deleteObject 요청 실행");
+            s3Client.deleteObject(deleteRequest);
+
+            log.info("S3 파일 삭제 완료: key={}", key);
+        } catch (Exception e) {
+            log.error("S3 파일 삭제 실패: fileUrl={}, 오류={}", fileUrl, e.getMessage(), e);
+            throw new FileUploadFailedException("파일 삭제 중 오류가 발생했습니다: " + e.getMessage());
+        }
     }
 }

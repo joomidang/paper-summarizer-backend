@@ -30,11 +30,21 @@ public class PaperController {
             @Authenticated String providerUid,
             @RequestPart("file") MultipartFile file) {
 
-        log.info("논문 업로드 요청: {}", file.getOriginalFilename());
+        log.info("논문 업로드 요청 시작: fileName={}, fileSize={}, providerUid={}", 
+                file.getOriginalFilename(), file.getSize(), providerUid);
+        log.debug("논문 업로드 컨트롤러 진입: contentType={}", file.getContentType());
 
-        Paper savedPaper = paperService.uploadPaper(file, providerUid);
+        try {
+            log.debug("논문 업로드 서비스 호출 시작");
+            Paper savedPaper = paperService.uploadPaper(file, providerUid);
+            log.info("논문 업로드 완료: paperId={}, title={}", savedPaper.getId(), savedPaper.getTitle());
 
-        return ResponseEntity.ok()
-                .body(ApiResponse.successWithData(UPLOAD_SUCCESS, PaperResponse.of(savedPaper)));
+            return ResponseEntity.ok()
+                    .body(ApiResponse.successWithData(UPLOAD_SUCCESS, PaperResponse.of(savedPaper)));
+        } catch (Exception e) {
+            log.error("논문 업로드 처리 실패: fileName={}, 오류={}", 
+                    file.getOriginalFilename(), e.getMessage(), e);
+            throw e;
+        }
     }
 }
