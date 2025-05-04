@@ -35,8 +35,7 @@ public class PaperControllerTest {
     private PaperService paperService;
 
     /**
-     * 테스트용 인증 어노테이션 리졸버
-     * X-AUTH-ID 헤더에서 사용자 ID를 추출하여 @Authenticated 어노테이션이 붙은 파라미터에 주입
+     * 테스트용 인증 어노테이션 리졸버 X-AUTH-ID 헤더에서 사용자 ID를 추출하여 @Authenticated 어노테이션이 붙은 파라미터에 주입
      */
     static class TestAuthenticatedArgumentResolver implements HandlerMethodArgumentResolver {
 
@@ -83,7 +82,6 @@ public class PaperControllerTest {
         Paper savedPaper = Paper.builder()
                 .id(1L)
                 .title(null)
-                .publicationDate(null)
                 .filePath("https://example.com/papers/test-paper.pdf")
                 .fileType("application/pdf")
                 .fileSize(file.getSize())

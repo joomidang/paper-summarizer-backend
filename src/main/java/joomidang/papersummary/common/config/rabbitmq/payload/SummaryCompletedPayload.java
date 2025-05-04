@@ -1,7 +1,9 @@
 package joomidang.papersummary.common.config.rabbitmq.payload;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record SummaryCompletedPayload(
-        Long paperId,
-        String s3Key
+        @JsonProperty("paperId") Long paperId,
+        @JsonProperty("s3Key") String s3Key
 ) {
 }

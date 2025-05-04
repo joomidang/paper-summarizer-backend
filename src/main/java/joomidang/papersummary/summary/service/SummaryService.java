@@ -19,6 +19,7 @@ public class SummaryService {
     private final SummaryRepository summaryRepository;
 
     public void createSummaryFromS3(Long paperId, String s3Key) {
+        log.info("✔️ 전달된 s3Key 확인: {}", s3Key);
         Paper paper = paperService.findById(paperId);
         Summary summary = Summary.builder()
                 .title(paper.getTitle())

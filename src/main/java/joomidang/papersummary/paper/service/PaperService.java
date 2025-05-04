@@ -5,13 +5,13 @@ import joomidang.papersummary.analysislog.entity.AnalysisLog;
 import joomidang.papersummary.analysislog.entity.AnalysisSourceType;
 import joomidang.papersummary.analysislog.entity.AnalysisStage;
 import joomidang.papersummary.analysislog.entity.AnalysisStatus;
-import joomidang.papersummary.analysislog.entity.AnalysisTool;
 import joomidang.papersummary.analysislog.repository.AnalysisLogRepository;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.entity.Status;
 import joomidang.papersummary.paper.exception.InvalidFileTypeException;
+import joomidang.papersummary.paper.exception.PaperNotFoundException;
 import joomidang.papersummary.paper.repository.PaperRepository;
 import joomidang.papersummary.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Slf4j
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class PaperService {
 
@@ -65,6 +66,11 @@ public class PaperService {
 
         log.info("논문 업로드 완료: {}, ID: {}", file.getOriginalFilename(), savedPaper.getId());
         return savedPaper;
+    }
+
+    public Paper findById(Long paperId) {
+        return paperRepository.findById(paperId)
+                .orElseThrow(() -> new PaperNotFoundException(paperId));
     }
 
     /**
@@ -120,7 +126,6 @@ public class PaperService {
         AnalysisLog analysisLog = AnalysisLog.builder()
                 .paper(paper)
                 .member(member)
-                .tool(AnalysisTool.MINERU)
                 .status(AnalysisStatus.PENDING)
                 .startedAt(LocalDateTime.now())
                 .stage(AnalysisStage.MINERU)
@@ -128,11 +133,5 @@ public class PaperService {
                 .build();
 
         analysisLogRepository.save(analysisLog);
-
-        // 향후 minerU 서버에 분석 요청 추가 예정
-        // TODO: minerU 서버에 PDF 파싱 요청
-        // 1. minerU API 호출하여 s3Url 전달
-        // 2. 분석 결과 수신 후 Paper 엔티티 업데이트 (title, publicationDate 등)
-        // 3. 분석 로그 업데이트 (status, completedAt 등)
     }
 }
