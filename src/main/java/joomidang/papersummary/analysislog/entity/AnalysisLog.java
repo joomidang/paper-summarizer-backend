@@ -51,10 +51,6 @@ public class AnalysisLog extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AnalysisTool tool;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private AnalysisStatus status;
 
     @Column(name = "started_at", nullable = false)
@@ -73,6 +69,16 @@ public class AnalysisLog extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "source_type", nullable = false)
     private AnalysisSourceType sourceType;
+
+    /**
+     * 각 단계별 Pending 처리
+     */
+    public void pending() {
+        this.status = AnalysisStatus.PENDING;
+        this.startedAt = LocalDateTime.now();
+        this.completedAt = null;
+        this.errorMessage = null;
+    }
 
     /**
      * 각 단계별 완료 처리

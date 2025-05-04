@@ -70,6 +70,9 @@ public class PaperParsingCallbackService {
                 "ko"
         );
 
+        analysisLogService.updateAnalysisLogStage(paperId, AnalysisStage.MINERU, AnalysisStage.GPT);
+        analysisLogService.markPending(paperId, AnalysisStage.GPT);
+
         paperEventPublisher.publish(new PaperEventEnvelop<>(
                 PaperEventType.SUMMARY_REQUESTED,
                 payload

@@ -1,5 +1,7 @@
 package joomidang.papersummary.paper.infra;
 
+import joomidang.papersummary.analysislog.entity.AnalysisStage;
+import joomidang.papersummary.analysislog.service.AnalysisLogService;
 import joomidang.papersummary.common.config.rabbitmq.payload.ParsingRequestedPayload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class RealParsingClient implements ParsingClient {
     private final RestTemplate restTemplate;
+    private final AnalysisLogService analysisLogService;
 
     @Value("${mineru.parsing-url}")
     private String parsingUrl;
@@ -35,10 +38,11 @@ public class RealParsingClient implements ParsingClient {
             HttpEntity<ParsingRequestedPayload> request = new HttpEntity<>(payload, headers);
 
             restTemplate.postForEntity(parsingUrl, request, Void.class);
-
+            analysisLogService.markPending(payload.paperId(), AnalysisStage.MINERU);
             log.info("MinerU 파싱 요청 전송 완료");
         } catch (Exception e) {
             log.error("MinerU 파싱 요청 실패", e);
+            analysisLogService.markFailed(payload.paperId(), AnalysisStage.MINERU, e.getMessage());
             throw new RuntimeException("MinerU 파싱 요청 실패", e);
         }
     }

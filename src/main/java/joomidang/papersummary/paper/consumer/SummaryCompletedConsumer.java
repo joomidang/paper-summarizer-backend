@@ -1,5 +1,7 @@
 package joomidang.papersummary.paper.consumer;
 
+import joomidang.papersummary.analysislog.entity.AnalysisStage;
+import joomidang.papersummary.analysislog.service.AnalysisLogService;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventEnvelop;
 import joomidang.papersummary.common.config.rabbitmq.RabbitMQConfig;
 import joomidang.papersummary.common.config.rabbitmq.payload.SummaryCompletedPayload;
@@ -16,13 +18,15 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SummaryCompletedConsumer {
     private final SummaryService summaryService;
+    private final AnalysisLogService analysisLogService;
 
     @RabbitListener(queues = RabbitMQConfig.COMPLETE_QUEUE)
     public void consume(PaperEventEnvelop<SummaryCompletedPayload> event) {
         try {
             SummaryCompletedPayload payload = event.payload();
             log.info("SUMMARY_COMPLETED 수신 → paperId={}, s3Key={}", payload.paperId(), payload.s3Key());
-
+            analysisLogService.markSuccess(payload.paperId(), AnalysisStage.GPT);
+            //Summary 저장
             summaryService.createSummaryFromS3(payload.paperId(), payload.s3Key());
         } catch (AlreadySummarizedException e) {
             log.error(e.getMessage(), e);
