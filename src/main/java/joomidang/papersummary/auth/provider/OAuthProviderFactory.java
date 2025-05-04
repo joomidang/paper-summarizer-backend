@@ -4,7 +4,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import joomidang.papersummary.users.entity.AuthProvider;
+import joomidang.papersummary.member.entity.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

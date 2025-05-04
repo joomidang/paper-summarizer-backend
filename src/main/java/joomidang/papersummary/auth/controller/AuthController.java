@@ -11,7 +11,7 @@ import joomidang.papersummary.auth.dto.TokenDto;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.service.AuthService;
 import joomidang.papersummary.common.controller.response.ApiResponse;
-import joomidang.papersummary.users.entity.AuthProvider;
+import joomidang.papersummary.member.entity.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

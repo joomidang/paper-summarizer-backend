@@ -5,9 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import joomidang.papersummary.users.entity.AuthProvider;
-import joomidang.papersummary.users.entity.Member;
-import joomidang.papersummary.users.entity.Role;
+import joomidang.papersummary.member.entity.AuthProvider;
+import joomidang.papersummary.member.entity.Member;
+import joomidang.papersummary.member.entity.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -158,9 +158,6 @@ public class GitHubOAuthProvider implements OAuthProvider {
         String email = (String) userInfo.get("email");
         String profileImage = (String) userInfo.get("avatar_url");
 
-        // provider_data: Map -> JSON 변환
-        String providerData = parseProviderData(userInfo);
-
         // 이름이 null인 경우 로그인을 사용자 이름으로 사용
         String username = (name != null && !name.isEmpty()) ? name : login;
 
@@ -172,7 +169,6 @@ public class GitHubOAuthProvider implements OAuthProvider {
                 .profileImage(profileImage)
                 .authProvider(AuthProvider.GITHUB)
                 .providerUid(providerUid)
-                .providerData(providerData)
                 .role(Role.USER)
                 .build();
     }

@@ -1,8 +1,8 @@
 package joomidang.papersummary.auth.provider;
 
 import java.util.Map;
-import joomidang.papersummary.users.entity.AuthProvider;
-import joomidang.papersummary.users.entity.Member;
+import joomidang.papersummary.member.entity.AuthProvider;
+import joomidang.papersummary.member.entity.Member;
 
 /**
  * OAuth 제공자를 위한 인터페이스. 이 인터페이스는 모든 OAuth 제공자가 구현해야 하는 공통 작업을 정의합니다.

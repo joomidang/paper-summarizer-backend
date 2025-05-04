@@ -19,7 +19,7 @@ import joomidang.papersummary.auth.controller.request.WithdrawRequest;
 import joomidang.papersummary.auth.dto.TokenDto;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.service.AuthService;
-import joomidang.papersummary.users.entity.AuthProvider;
+import joomidang.papersummary.member.entity.AuthProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
