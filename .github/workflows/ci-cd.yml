@@ -144,6 +144,7 @@ jobs:
             RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}
             RABBITMQ_USERNAME=${{ secrets.RABBITMQ_USERNAME }}
             RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
+            RABBITMQ_QUEUE_NAME: ${{ secrets.RABBITMQ_QUEUE_NAME }}
             # etc...
             EOF
             
