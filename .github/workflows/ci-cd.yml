@@ -135,6 +135,7 @@ jobs:
             GITHUB_REDIRECT_URI=${{ secrets.REDIRECT_URI_GITHUB }}
             
             # AWS
+            AWS_S3_BUCKET_NAME=${{secrets.AWS_S3_BUCKET_NAME}}
             AWS_REGION=${{ secrets.AWS_REGION }}
             AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
