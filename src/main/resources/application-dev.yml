@@ -43,6 +43,9 @@ aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
 
+mineru:
+  parsing-url: ${MINERU_PARSING_URL}
+
 logging:
   config: classpath:logback/logback-dev.xml
   level:
