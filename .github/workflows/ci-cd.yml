@@ -146,6 +146,9 @@ jobs:
             RABBITMQ_USERNAME=${{ secrets.RABBITMQ_USERNAME }}
             RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
             RABBITMQ_QUEUE_NAME=${{ secrets.RABBITMQ_QUEUE_NAME }}
+            
+            # MinerU 파싱 서버
+            MINERU_PARSING_URL=${{secrets.MINERU_PARSING_URL}}
             # etc...
             EOF
             
