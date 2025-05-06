@@ -2,12 +2,12 @@ package joomidang.papersummary.summary.service;
 
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.service.PaperService;
-import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
+import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SummaryService {
     private final PaperService paperService;
     private final SummaryRepository summaryRepository;
+    private final VisualContentService visualContentService;
 
     public void createSummaryFromS3(Long paperId, String s3Key) {
         log.info("S3에서 요약 생성 시작: paperId={}", paperId);
@@ -44,7 +45,7 @@ public class SummaryService {
             }
             log.debug("기존 요약 없음, 새 요약 생성 진행");
 
-            log.debug("요약 엔티티 생성: title={}, s3KeyMd={}, memberId={}", 
+            log.debug("요약 엔티티 생성: title={}, s3KeyMd={}, memberId={}",
                     paper.getTitle(), s3Key, paper.getMember().getId());
             Summary summary = Summary.builder()
                     .title(paper.getTitle())
@@ -56,14 +57,19 @@ public class SummaryService {
                     .member(paper.getMember())
                     .build();
 
+            connectVisualsToSummary(summary);
             log.debug("요약 저장 시작");
             summaryRepository.save(summary);
-            log.info("요약 저장 완료: paperId={}, summaryId={}", 
+            log.info("요약 저장 완료: paperId={}, summaryId={}",
                     paperId, summary.getSummaryId());
         } catch (Exception e) {
             log.error("요약 생성 중 오류 발생: paperId={}, 오류={}", paperId, e.getMessage(), e);
             throw new SummaryCreationFailedException(e.getMessage());
         }
+    }
+
+    private void connectVisualsToSummary(Summary summary) {
+        visualContentService.connectToSummary(summary);
     }
 
     public Summary findById(Long summaryId) {

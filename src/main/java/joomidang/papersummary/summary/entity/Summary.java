@@ -67,4 +67,8 @@ public class Summary extends BaseTimeEntity {
     public Long getSummaryId() {
         return id;
     }
+
+    public Long getPaperId() {
+        return paper.getId();
+    }
 }
