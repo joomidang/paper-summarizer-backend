@@ -14,12 +14,14 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import joomidang.papersummary.common.audit.entity.BaseTimeEntity;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.paper.entity.Paper;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -29,6 +31,7 @@ import lombok.NoArgsConstructor;
         @Index(name = "idx_publish_status", columnList = "publish_status")
 })
 @Builder
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Summary extends BaseTimeEntity {
@@ -70,5 +73,17 @@ public class Summary extends BaseTimeEntity {
 
     public Long getPaperId() {
         return paper.getId();
+    }
+
+    public boolean isNotSameMemberId(Long memberId) {
+        return member.isNotSame(memberId);
+    }
+
+    public void publish(String title, String brief, String s3KeyMd) {
+        this.title = title;
+        this.brief = brief;
+        this.s3KeyMd = s3KeyMd;
+        this.publishStatus = PublishStatus.PUBLISHED;
+        this.updatedAt = LocalDateTime.now();
     }
 }
