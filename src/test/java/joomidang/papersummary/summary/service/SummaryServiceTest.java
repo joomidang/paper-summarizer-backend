@@ -15,7 +15,6 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
-
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
@@ -23,13 +22,13 @@ import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.entity.SummaryVersion;
-import joomidang.papersummary.summary.entity.VersionType;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
@@ -342,7 +341,8 @@ public class SummaryServiceTest {
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findById(summaryId);
         verify(s3Service, times(1)).saveMarkdownToS3(anyString(), eq(request.markdownContent()));
-        verify(summaryVersionService, times(1)).createDraftVersion(eq(mockSummary), anyString(), eq(request.title()), eq(mockMember));
+        verify(summaryVersionService, times(1)).createDraftVersion(eq(mockSummary), anyString(), eq(request.title()),
+                eq(mockMember));
     }
 
     @Test
@@ -364,6 +364,7 @@ public class SummaryServiceTest {
 
         Summary mockSummary = mock(Summary.class);
         when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getTitle()).thenReturn("Published Title");
         when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
         when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
         when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
@@ -380,13 +381,73 @@ public class SummaryServiceTest {
         assertNotNull(response);
         assertEquals(summaryId, response.summaryId());
         assertEquals(markdownUrl, response.markdownUrl());
+        assertEquals("Published Title", response.title());
         assertNotNull(response.publishedAt());
 
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findById(summaryId);
         verify(s3Service, times(1)).saveMarkdownToS3(anyString(), eq(request.markdownContent()));
-        verify(summaryVersionService, times(1)).createPublishedVersion(eq(mockSummary), anyString(), eq(request.title()), eq(mockMember));
+        verify(summaryVersionService, times(1)).createPublishedVersion(eq(mockSummary), anyString(),
+                eq(request.title()), eq(mockMember));
         verify(mockSummary, times(1)).publish(eq(request.title()), eq(request.brief()), anyString());
         verify(summaryRepository, times(1)).save(mockSummary);
+    }
+
+    @Test
+    @DisplayName("발행된 요약본 상세 조회 성공 테스트")
+    void getSummaryDetailSuccess() {
+        // given
+        Long summaryId = 1L;
+        String s3Key = "test-s3-key.md";
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/" + s3Key;
+        LocalDateTime updatedAt = LocalDateTime.now();
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getTitle()).thenReturn("Test Summary Title");
+        when(mockSummary.getBrief()).thenReturn("Test Brief");
+        when(mockSummary.getS3KeyMd()).thenReturn(s3Key);
+        when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.PUBLISHED);
+        when(mockSummary.getUpdatedAt()).thenReturn(updatedAt);
+        when(mockSummary.getViewCount()).thenReturn(10);
+        when(mockSummary.getLikeCount()).thenReturn(5);
+
+        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+
+        // when
+        SummaryDetailResponse response = summaryService.getSummaryDetail(summaryId);
+
+        // then
+        assertNotNull(response);
+        assertEquals(summaryId, response.summaryId());
+        assertEquals("Test Summary Title", response.title());
+        assertEquals("Test Brief", response.brief());
+        assertEquals(markdownUrl, response.markdownUrl());
+        assertEquals(Collections.emptyList(), response.tags());
+        assertEquals(updatedAt, response.publishedAt());
+        assertEquals(10, response.viewCount());
+        assertEquals(5, response.likeCount());
+
+        verify(summaryRepository, times(1)).findById(summaryId);
+    }
+
+    @Test
+    @DisplayName("발행되지 않은 요약본 상세 조회 시 예외 발생 테스트")
+    void getSummaryDetailAccessDenied() {
+        // given
+        Long summaryId = 1L;
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.DRAFT); // Not published
+
+        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+
+        // when & then
+        assertThrows(AccessDeniedException.class, () -> {
+            summaryService.getSummaryDetail(summaryId);
+        });
+
+        verify(summaryRepository, times(1)).findById(summaryId);
     }
 }

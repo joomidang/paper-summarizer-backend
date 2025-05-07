@@ -148,8 +148,8 @@ public class SummaryService {
 
         return SummaryPublishResponse.of(
                 summary.getId(),
-                markdownUrl,
                 summary.getTitle(),
+                markdownUrl,
                 summary.getUpdatedAt()
         );
     }
