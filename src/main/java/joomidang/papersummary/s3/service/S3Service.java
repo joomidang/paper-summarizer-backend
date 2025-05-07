@@ -18,4 +18,9 @@ public interface S3Service {
      * @param fileUrl 삭제할 파일의 URL
      */
     void deleteFile(String fileUrl);
+
+    /**
+     * 마크다운을 S3에 업로드
+     */
+    String saveMarkdownToS3(String key, String markdownContent);
 }

@@ -1,6 +1,7 @@
 package joomidang.papersummary.s3.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import joomidang.papersummary.paper.exception.FileUploadFailedException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,10 @@ public class S3ServiceImpl implements S3Service {
     private final S3Client s3Client;
 
     @Value("${aws.s3.bucket-name}")
-    private String bucketName;
+    private String uploadBucketName;
+
+    @Value("${aws.s3.summary-bucket-name}")
+    private String summaryBucketName;
 
     @Override
     public String uploadFile(MultipartFile file, String dirName) {
@@ -36,11 +40,11 @@ public class S3ServiceImpl implements S3Service {
         log.debug("생성된 S3 키: {}", key);
 
         try {
-            log.debug("S3 PutObjectRequest 생성: bucket={}, key={}, contentType={}", 
-                    bucketName, key, file.getContentType());
+            log.debug("S3 PutObjectRequest 생성: bucket={}, key={}, contentType={}",
+                    uploadBucketName, key, file.getContentType());
 
             PutObjectRequest request = PutObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(uploadBucketName)
                     .key(key)
                     .contentType(file.getContentType())
                     .build();
@@ -48,7 +52,7 @@ public class S3ServiceImpl implements S3Service {
             log.debug("S3 putObject 요청 실행: fileSize={}", file.getSize());
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-            String fileUrl = "https://" + bucketName + ".s3.amazonaws.com/" + key;
+            String fileUrl = "https://" + uploadBucketName + ".s3.amazonaws.com/" + key;
             log.info("S3 파일 업로드 완료: fileUrl={}", fileUrl);
             return fileUrl;
         } catch (IOException e) {
@@ -65,9 +69,9 @@ public class S3ServiceImpl implements S3Service {
             String key = fileUrl.substring(fileUrl.indexOf(".com/") + 5);
             log.debug("추출된 S3 키: {}", key);
 
-            log.debug("S3 DeleteObjectRequest 생성: bucket={}, key={}", bucketName, key);
+            log.debug("S3 DeleteObjectRequest 생성: bucket={}, key={}", uploadBucketName, key);
             DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
+                    .bucket(uploadBucketName)
                     .key(key)
                     .build();
 
@@ -78,6 +82,27 @@ public class S3ServiceImpl implements S3Service {
         } catch (Exception e) {
             log.error("S3 파일 삭제 실패: fileUrl={}, 오류={}", fileUrl, e.getMessage(), e);
             throw new FileUploadFailedException("파일 삭제 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public String saveMarkdownToS3(String key, String markdownContent) {
+        log.info("S3 마크다운 텍스트 업로드 시작: ");
+
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(summaryBucketName)
+                    .key(key)
+                    .contentType("text/markdown")
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(markdownContent.getBytes(StandardCharsets.UTF_8)));
+            String fileUrl = "https://" + summaryBucketName + ".s3.amazonaws.com/" + key;
+            log.info("S3 마크다운 업로드 완료: fileUrl={}", fileUrl);
+            return fileUrl;
+        } catch (Exception e) {
+            log.error("S3 마크다운 업로드 실패: key={}, 오류={}", key, e.getMessage(), e);
+            throw new FileUploadFailedException("마크다운 업로드 실패: " + e.getMessage());
         }
     }
 }
