@@ -10,6 +10,7 @@ import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
@@ -148,9 +149,29 @@ public class SummaryService {
         return SummaryPublishResponse.of(
                 summary.getId(),
                 markdownUrl,
+                summary.getTitle(),
                 summary.getUpdatedAt()
         );
     }
+
+    //요약본 단건 조회
+    @Transactional(readOnly = true)
+    public SummaryDetailResponse getSummaryDetail(Long summaryId) {
+        Summary summary = findById(summaryId);
+
+        if (summary.getPublishStatus() != PublishStatus.PUBLISHED) {
+            throw new AccessDeniedException("발행되지 않은 요약본은 조회할 수 없습니다.");
+        }
+
+        String markdownUrl = getMarkdownUrl(summary.getS3KeyMd());
+
+        // 태그 목록 조회
+        // TODO: 태그 조회 로직 구현 필요
+        List<String> tags = Collections.emptyList();
+
+        return SummaryDetailResponse.from(summary, markdownUrl, tags);
+    }
+
 
     private void validateS3Key(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
