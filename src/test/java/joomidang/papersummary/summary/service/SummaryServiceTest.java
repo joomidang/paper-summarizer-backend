@@ -13,7 +13,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
@@ -32,6 +34,7 @@ import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
+import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -219,6 +222,14 @@ public class SummaryServiceTest {
         // No draft version found, use original s3Key
         when(summaryVersionService.findLatestDraft(summaryId)).thenReturn(Optional.empty());
 
+        // Mock visual content data
+        List<String> figureUrls = Arrays.asList("figure1.jpg", "figure2.jpg");
+        List<String> tableUrls = Arrays.asList("table1.jpg");
+        when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE)))
+                .thenReturn(figureUrls);
+        when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
+                .thenReturn(tableUrls);
+
         String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/original-s3-key.md";
 
         // when
@@ -229,10 +240,14 @@ public class SummaryServiceTest {
         assertEquals(mockSummary.getTitle(), response.getTitle());
         assertEquals(mockSummary.getBrief(), response.getBrief());
         assertEquals(markdownUrl, response.getMarkdownUrl());
+        assertEquals(figureUrls, response.getFigures());
+        assertEquals(tableUrls, response.getTables());
 
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findById(summaryId);
         verify(summaryVersionService, times(1)).findLatestDraft(summaryId);
+        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE));
+        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE));
     }
 
     @Test
@@ -259,6 +274,14 @@ public class SummaryServiceTest {
         when(mockVersion.getS3KeyMd()).thenReturn("draft-s3-key.md");
         when(summaryVersionService.findLatestDraft(summaryId)).thenReturn(Optional.of(mockVersion));
 
+        // Mock visual content data
+        List<String> figureUrls = Arrays.asList("figure1.jpg", "figure2.jpg");
+        List<String> tableUrls = Arrays.asList("table1.jpg");
+        when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE)))
+                .thenReturn(figureUrls);
+        when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
+                .thenReturn(tableUrls);
+
         String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/draft-s3-key.md";
 
         // when
@@ -269,10 +292,14 @@ public class SummaryServiceTest {
         assertEquals(mockSummary.getTitle(), response.getTitle());
         assertEquals(mockSummary.getBrief(), response.getBrief());
         assertEquals(markdownUrl, response.getMarkdownUrl());
+        assertEquals(figureUrls, response.getFigures());
+        assertEquals(tableUrls, response.getTables());
 
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findById(summaryId);
         verify(summaryVersionService, times(1)).findLatestDraft(summaryId);
+        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE));
+        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE));
     }
 
     @Test
