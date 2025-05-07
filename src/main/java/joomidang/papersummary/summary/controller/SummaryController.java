@@ -3,6 +3,7 @@ package joomidang.papersummary.summary.controller;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
@@ -28,6 +29,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class SummaryController {
 
     private final SummaryService summaryService;
+
+    /**
+     * 요약본 단건 조회
+     */
+    @GetMapping("/{summaryId}")
+    public ResponseEntity<ApiResponse<SummaryDetailResponse>> getSummaryDetail(@PathVariable Long summaryId) {
+        SummaryDetailResponse response = summaryService.getSummaryDetail(summaryId);
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
 
     /**
      * 요약본 편집을 위한 상세 정보 조회 API
