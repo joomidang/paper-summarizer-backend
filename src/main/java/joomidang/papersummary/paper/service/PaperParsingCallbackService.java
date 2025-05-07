@@ -57,8 +57,8 @@ public class PaperParsingCallbackService {
         analysisLogService.markSuccess(paperId, AnalysisStage.MINERU);
 
         // 4. 시각 자료 저장
-        saveVisuals(paper, result.figure(), VisualContentType.FIGURE);
-        saveVisuals(paper, result.table(), VisualContentType.TABLE);
+        saveVisuals(paper, result.figures(), VisualContentType.FIGURE);
+        saveVisuals(paper, result.tables(), VisualContentType.TABLE);
 
         log.info("파싱 콜백 처리 완료 → paperId={}", paperId);
 
