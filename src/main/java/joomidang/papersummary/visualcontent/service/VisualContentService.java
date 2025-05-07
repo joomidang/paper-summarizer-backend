@@ -2,6 +2,7 @@ package joomidang.papersummary.visualcontent.service;
 
 import java.util.List;
 import joomidang.papersummary.paper.entity.Paper;
+import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.visualcontent.entity.VisualContent;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.repository.VisualContentRepository;
@@ -18,7 +19,7 @@ public class VisualContentService {
     private final VisualContentRepository visualContentRepository;
 
     public void saveAll(Paper paper, List<String> urls, VisualContentType type) {
-        log.info("시각 콘텐츠 저장 시작: paperId={}, type={}, urlCount={}", 
+        log.info("시각 콘텐츠 저장 시작: paperId={}, type={}, urlCount={}",
                 paper.getId(), type, urls.size());
 
         try {
@@ -34,16 +35,23 @@ public class VisualContentService {
                         .position(position++)
                         .build();
 
-                log.debug("시각 콘텐츠 저장: position={}", position-1);
+                log.debug("시각 콘텐츠 저장: position={}", position - 1);
                 visualContentRepository.save(content);
             }
 
-            log.info("시각 콘텐츠 저장 완료: paperId={}, type={}, 저장된 콘텐츠 수={}", 
+            log.info("시각 콘텐츠 저장 완료: paperId={}, type={}, 저장된 콘텐츠 수={}",
                     paper.getId(), type, position);
         } catch (Exception e) {
-            log.error("시각 콘텐츠 저장 중 오류 발생: paperId={}, type={}, 오류={}", 
+            log.error("시각 콘텐츠 저장 중 오류 발생: paperId={}, type={}, 오류={}",
                     paper.getId(), type, e.getMessage(), e);
             throw e;
         }
+    }
+
+    public void connectToSummary(Summary summary) {
+        Long summaryId = summary.getSummaryId();
+        List<VisualContent> content = visualContentRepository.findByPaperIdAndSummaryIsNull(summaryId);
+        content.forEach(v -> v.connectToSummary(summary));
+        visualContentRepository.saveAll(content);
     }
 }

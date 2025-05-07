@@ -61,4 +61,8 @@ public class VisualContent {
                 .position(position)
                 .build();
     }
+
+    public void connectToSummary(Summary summary) {
+        this.summary = summary;
+    }
 }
