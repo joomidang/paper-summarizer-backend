@@ -82,10 +82,11 @@ public class RabbitMQConfig {
                 .with(ROUTING_KEY_COMPLETE);
     }
 
-    @Bean(name="rabbitListenerContainerFactory")
+    @Bean(name = "rabbitListenerContainerFactory")
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(messageConverter());
         factory.setDefaultRequeueRejected(false); // 예외 발생 시 메시지를 재큐하지 않음
         return factory;
     }
