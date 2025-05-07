@@ -24,12 +24,12 @@ import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * PaperParsingCallbackController API 문서화 테스트 클래스
- * RestDocsSupport를 상속받아 구현하여 논문 파싱 콜백 API 문서화를 수행합니다.
+ * PaperParsingCallbackController API 문서화 테스트 클래스 RestDocsSupport를 상속받아 구현하여 논문 파싱 콜백 API 문서화를 수행합니다.
  */
 public class PaperParsingCallbackControllerDocumentation extends RestDocsSupport {
 
-    private final PaperParsingCallbackService paperParsingCallbackService = Mockito.mock(PaperParsingCallbackService.class);
+    private final PaperParsingCallbackService paperParsingCallbackService = Mockito.mock(
+            PaperParsingCallbackService.class);
 
     @Test
     @DisplayName("논문 파싱 콜백 API 문서화")
@@ -63,9 +63,9 @@ public class PaperParsingCallbackControllerDocumentation extends RestDocsSupport
                                         .description("논문 제목"),
                                 fieldWithPath("markdownUrl").type(JsonFieldType.STRING)
                                         .description("마크다운 파일 URL"),
-                                fieldWithPath("figure").type(JsonFieldType.ARRAY)
+                                fieldWithPath("figures").type(JsonFieldType.ARRAY)
                                         .description("논문 내 그림 파일 목록"),
-                                fieldWithPath("table").type(JsonFieldType.ARRAY)
+                                fieldWithPath("tables").type(JsonFieldType.ARRAY)
                                         .description("논문 내 표 파일 목록")
                         ),
                         responseFields(
