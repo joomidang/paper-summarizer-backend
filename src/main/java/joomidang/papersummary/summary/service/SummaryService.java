@@ -20,6 +20,7 @@ import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
+import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +90,13 @@ public class SummaryService {
         // TODO: 태그 조회 로직 구현 필요
         List<String> tags = Collections.emptyList();
 
-        SummaryEditDetailResponse response = SummaryEditDetailResponse.from(summary, markdownUrl, tags);
+        // 시각 콘텐츠(figures, tables) 조회
+        List<String> figures = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.FIGURE);
+        List<String> tables = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.TABLE);
+        log.debug("시각 콘텐츠 조회 완료: summaryId={}, figuresCount={}, tablesCount={}", 
+                summaryId, figures.size(), tables.size());
+
+        SummaryEditDetailResponse response = SummaryEditDetailResponse.from(summary, markdownUrl, figures, tables, tags);
         log.debug("요약본 편집을 위한 상세 정보 조회 완료: summaryId={}", summaryId);
 
         return response;
