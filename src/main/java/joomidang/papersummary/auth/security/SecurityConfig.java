@@ -27,7 +27,8 @@ public class SecurityConfig {
                         session ->
                                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**",
+                                "/api/papers/*/callback").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(tokenProvider),
