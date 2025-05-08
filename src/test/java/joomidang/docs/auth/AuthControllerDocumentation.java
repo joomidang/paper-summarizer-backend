@@ -56,7 +56,7 @@ public class AuthControllerDocumentation extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("깃허브 콜백 API (쿠키 + 리디렉션 응답) 문서화")
+    @DisplayName("깃허브 콜백 API (쿠키 응답) 문서화")
     void githubCallback() throws Exception {
         // given
         TokenDto tokenDto = TokenDto.builder()
@@ -77,14 +77,15 @@ public class AuthControllerDocumentation extends RestDocsSupport {
         );
 
         // then
-        result.andExpect(status().isFound()) // 302 리디렉션
+        result.andExpect(status().isOk()) // 200 OK
                 .andExpect(header().exists("Set-Cookie"))
-                .andExpect(header().string("Location", "http://localhost:3000"))
                 .andDo(createDocument(
                         queryParameters(
                                 parameterWithName("code").description("깃허브 인증 코드")
+                        ),
+                        responseHeaders(
+                                headerWithName("Set-Cookie").description("인증 쿠키 (accessToken, refreshToken)")
                         )
-                        // JSON 응답 문서화 제거됨
                 ));
     }
 
