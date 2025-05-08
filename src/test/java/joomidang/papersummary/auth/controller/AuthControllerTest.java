@@ -20,6 +20,7 @@ import joomidang.papersummary.auth.dto.TokenDto;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.service.AuthService;
 import joomidang.papersummary.member.entity.AuthProvider;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -96,25 +97,33 @@ public class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GitHub 콜백 처리 테스트")
+    @DisplayName("GitHub 콜백 처리 테스트 - 쿠키 + 리디렉션")
     void githubCallback() throws Exception {
         // given
         String code = "test-code";
-        when(authService.processOAuthCallback(eq(AuthProvider.GITHUB), eq(code))).thenReturn(tokenDto);
+        TokenDto tokenDto = TokenDto.builder()
+                .accessToken("test-access-token")
+                .refreshToken("test-refresh-token")
+                .tokenType("Bearer")
+                .expiresIn(3600L)
+                .build();
+
+        when(authService.processOAuthCallback(eq(AuthProvider.GITHUB), eq(code)))
+                .thenReturn(tokenDto);
 
         // when & then
         mockMvc.perform(get("/api/auth/github/callback")
                         .param("code", code)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("AUS-0001"))
-                .andExpect(jsonPath("$.message").value("로그인이 완료되었습니다."))
-                .andExpect(jsonPath("$.data.accessToken").value("test-access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("test-refresh-token"))
-                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
-                .andExpect(jsonPath("$.data.expiresIn").value(3600));
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "http://localhost:3000"))
+                .andExpect(header().stringValues("Set-Cookie", Matchers.hasItems(
+                        Matchers.containsString("accessToken=test-access-token"),
+                        Matchers.containsString("refreshToken=test-refresh-token")
+                )));
     }
+
 
     @Test
     @DisplayName("회원 탈퇴 테스트")

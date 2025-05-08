@@ -10,6 +10,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.requestF
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import joomidang.docs.util.RestDocsSupport;
@@ -55,7 +56,7 @@ public class AuthControllerDocumentation extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("깃허브 콜백 API 문서화")
+    @DisplayName("깃허브 콜백 API (쿠키 + 리디렉션 응답) 문서화")
     void githubCallback() throws Exception {
         // given
         TokenDto tokenDto = TokenDto.builder()
@@ -72,33 +73,21 @@ public class AuthControllerDocumentation extends RestDocsSupport {
         ResultActions result = mockMvc.perform(
                 get("/api/auth/github/callback")
                         .param("code", "test_code")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_HTML)
         );
 
         // then
-        result.andExpect(status().isOk())
+        result.andExpect(status().isFound()) // 302 리디렉션
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(header().string("Location", "http://localhost:3000"))
                 .andDo(createDocument(
                         queryParameters(
                                 parameterWithName("code").description("깃허브 인증 코드")
-                        ),
-                        responseFields(
-                                fieldWithPath("code").type(JsonFieldType.STRING)
-                                        .description("응답 코드"),
-                                fieldWithPath("message").type(JsonFieldType.STRING)
-                                        .description("응답 메시지"),
-                                fieldWithPath("data").type(JsonFieldType.OBJECT)
-                                        .description("토큰 정보"),
-                                fieldWithPath("data.accessToken").type(JsonFieldType.STRING)
-                                        .description("액세스 토큰"),
-                                fieldWithPath("data.refreshToken").type(JsonFieldType.STRING)
-                                        .description("리프레시 토큰"),
-                                fieldWithPath("data.tokenType").type(JsonFieldType.STRING)
-                                        .description("토큰 타입"),
-                                fieldWithPath("data.expiresIn").type(JsonFieldType.NUMBER)
-                                        .description("토큰 만료 시간(초)")
                         )
+                        // JSON 응답 문서화 제거됨
                 ));
     }
+
 
     @Test
     @DisplayName("회원 탈퇴 API 문서화")
