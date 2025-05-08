@@ -38,19 +38,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
-        //헤더에서 accessToken 찾기
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-
         //쿠키에서 accessToken 찾기
         if (request.getCookies() != null) {
+            log.debug("요청에 쿠키가 존재함: {}", Arrays.toString(request.getCookies()));
             return Arrays.stream(request.getCookies())
                     .filter(c -> "accessToken".equals(c.getName()))
                     .map(Cookie::getValue)
                     .findFirst()
                     .orElse(null);
+        } else {
+            log.debug("요청에 쿠키가 없음: {}", request.getRequestURI());
+        }
+        //헤더에서 accessToken 찾기
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            log.debug("헤더에서 토큰 발견: {}", bearerToken);
+            return bearerToken.substring(7);
         }
 
         return null;
