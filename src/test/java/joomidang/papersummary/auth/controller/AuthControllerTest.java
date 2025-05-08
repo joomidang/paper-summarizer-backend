@@ -97,7 +97,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("GitHub 콜백 처리 테스트 - 쿠키 + 리디렉션")
+    @DisplayName("GitHub 콜백 처리 테스트 - 쿠키 응답")
     void githubCallback() throws Exception {
         // given
         String code = "test-code";
@@ -116,8 +116,7 @@ public class AuthControllerTest {
                         .param("code", code)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", "http://localhost:3000"))
+                .andExpect(status().isOk())
                 .andExpect(header().stringValues("Set-Cookie", Matchers.hasItems(
                         Matchers.containsString("accessToken=test-access-token"),
                         Matchers.containsString("refreshToken=test-refresh-token")
