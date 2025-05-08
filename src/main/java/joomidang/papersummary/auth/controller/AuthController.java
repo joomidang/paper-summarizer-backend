@@ -68,8 +68,6 @@ public class AuthController {
         // 쿠키 추가
         response.addHeader("Set-Cookie", accessCookie.toString());
         response.addHeader("Set-Cookie", refreshCookie.toString());
-
-        response.sendRedirect("http://localhost:3000");
     }
 
     @PostMapping("/refresh")
