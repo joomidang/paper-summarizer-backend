@@ -69,7 +69,7 @@ public class AuthController {
         response.addHeader("Set-Cookie", accessCookie.toString());
         response.addHeader("Set-Cookie", refreshCookie.toString());
 
-        response.sendRedirect("http://localhost:3000/callback");
+        response.sendRedirect("http://localhost:3000/");
     }
 
     @PostMapping("/refresh")
