@@ -38,6 +38,7 @@ public class PaperParsingCallbackControllerDocumentation extends RestDocsSupport
         ParsingResultRequest request = new ParsingResultRequest(
                 "Sample Paper Title",
                 "https://example.com/markdown/paper123.md",
+                "https://example.com/markdown/paper123_content_list.json",
                 Arrays.asList("figure1.jpg", "figure2.jpg"),
                 Arrays.asList("table1.jpg", "table2.jpg")
         );
@@ -63,6 +64,8 @@ public class PaperParsingCallbackControllerDocumentation extends RestDocsSupport
                                         .description("논문 제목"),
                                 fieldWithPath("markdownUrl").type(JsonFieldType.STRING)
                                         .description("마크다운 파일 URL"),
+                                fieldWithPath("contentListUrl").type(JsonFieldType.STRING)
+                                        .description("컨텐츠 목록 파일"),
                                 fieldWithPath("figures").type(JsonFieldType.ARRAY)
                                         .description("논문 내 그림 파일 목록"),
                                 fieldWithPath("tables").type(JsonFieldType.ARRAY)

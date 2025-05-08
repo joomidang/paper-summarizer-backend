@@ -66,6 +66,7 @@ public class PaperParsingCallbackService {
         SummaryRequestedPayload payload = new SummaryRequestedPayload(
                 paperId,
                 result.markdownUrl(),
+                result.contentListUrl(),
                 "",   // 기본 프롬프트 (나중에 사용자 설정값 반영 가능)
                 "ko"
         );

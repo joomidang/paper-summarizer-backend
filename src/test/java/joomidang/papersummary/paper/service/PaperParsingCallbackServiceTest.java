@@ -62,12 +62,14 @@ public class PaperParsingCallbackServiceTest {
         Long paperId = 1L;
         String title = "Test Paper Title";
         String markdownUrl = "https://example.com/markdown/test-paper.md";
+        String contentListUrl = "https://example.com/content-list/test-paper_content_list.json";
         List<String> figures = Arrays.asList("https://example.com/figures/fig1.png", "https://example.com/figures/fig2.png");
         List<String> tables = Arrays.asList("https://example.com/tables/table1.png");
 
         ParsingResultRequest request = new ParsingResultRequest(
                 title,
                 markdownUrl,
+                contentListUrl,
                 figures,
                 tables
         );
@@ -113,6 +115,7 @@ public class PaperParsingCallbackServiceTest {
         ParsingResultRequest request = new ParsingResultRequest(
                 "Test Title",
                 "https://example.com/markdown/test.md",
+                "https://example.com/content-list/test-paper_content_list.json",
                 List.of(),
                 List.of()
         );
@@ -137,10 +140,11 @@ public class PaperParsingCallbackServiceTest {
         Long paperId = 1L;
         String title = "Test Paper Title";
         String markdownUrl = "https://example.com/markdown/test-paper.md";
-
+        String contentListUrl = "https://example.com/content-list/test-paper_content_list.json";
         ParsingResultRequest request = new ParsingResultRequest(
                 title,
                 markdownUrl,
+                contentListUrl,
                 null,  // No figures
                 null   // No tables
         );
