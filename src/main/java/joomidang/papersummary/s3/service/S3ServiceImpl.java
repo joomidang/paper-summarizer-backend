@@ -7,6 +7,7 @@ import joomidang.papersummary.paper.exception.FileUploadFailedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -18,6 +19,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  * S3 파일 업로드 서비스 구현체
  */
 @Slf4j
+@Profile("!local")
 @Service
 @RequiredArgsConstructor
 public class S3ServiceImpl implements S3Service {
