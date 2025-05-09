@@ -49,6 +49,7 @@ public class AuthenticatedArgumentResolver implements HandlerMethodArgumentResol
 
             if (tokenCookie.isPresent()) {
                 String token = "Bearer " + tokenCookie.get().getValue(); // Bearer 접두사 추가
+                log.debug("쿠키에서 토큰 발견: {}", tokenCookie.get().getName());
                 return tokenProvider.getUserId(token);
             }
         } else {
@@ -57,6 +58,7 @@ public class AuthenticatedArgumentResolver implements HandlerMethodArgumentResol
         // 2. 헤더에서 토큰 확인
         final String authorizationHeader = webRequest.getHeader("Authorization");
         if (StringUtils.hasText(authorizationHeader)) {
+            log.debug("헤더에서 토큰 발견: {}", authorizationHeader);
             return tokenProvider.getUserId(authorizationHeader);
         }
 
