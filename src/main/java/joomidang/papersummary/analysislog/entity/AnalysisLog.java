@@ -26,10 +26,10 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "analysis_log", indexes = {
-        @Index(name = "idx_paper_id", columnList = "paper_id"),
-        @Index(name = "idx_member_id", columnList = "member_id"),
-        @Index(name = "idx_status", columnList = "status"),
-        @Index(name = "idx_started_at", columnList = "started_at")
+        @Index(name = "idx_analysis_log_paper_id", columnList = "paper_id"),
+        @Index(name = "idx_analysis_log_member_id", columnList = "member_id"),
+        @Index(name = "idx_analysis_log_status", columnList = "status"),
+        @Index(name = "idx_analysis_log_started_at", columnList = "started_at")
 })
 @Getter
 @Builder

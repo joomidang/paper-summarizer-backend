@@ -21,8 +21,8 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "member_token", indexes = {
-        @Index(name = "idx_member_id", columnList = "member_id"),
-        @Index(name = "idx_token_expires_at", columnList = "token_expires_at")
+        @Index(name = "idx_member_token_member_id", columnList = "member_id"),
+        @Index(name = "idx_member_token_token_expires_at", columnList = "token_expires_at")
 })
 @Getter
 @Builder
