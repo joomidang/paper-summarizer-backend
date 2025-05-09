@@ -26,9 +26,9 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "summary", indexes = {
-        @Index(name = "idx_member_id", columnList = "member_id"),
-        @Index(name = "idx_paper_id", columnList = "paper_id"),
-        @Index(name = "idx_publish_status", columnList = "publish_status")
+        @Index(name = "idx_summary_member_id", columnList = "member_id"),
+        @Index(name = "idx_summary_paper_id", columnList = "paper_id"),
+        @Index(name = "idx_summary_publish_status", columnList = "publish_status")
 })
 @Builder
 @Getter

@@ -25,8 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Entity
 @Table(name = "paper", indexes = {
-        @Index(name = "idx_title", columnList = "title"),
-        @Index(name = "idx_member_id", columnList = "member_id")
+        @Index(name = "idx_paper_title", columnList = "title"),
+        @Index(name = "idx_paper_member_id", columnList = "member_id")
 })
 @Getter
 @Builder

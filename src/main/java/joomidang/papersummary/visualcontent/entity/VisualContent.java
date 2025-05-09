@@ -23,8 +23,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "visual_content",
         indexes = {
-                @Index(name = "idx_summary_id", columnList = "summary_id"),
-                @Index(name = "idx_summary_position_unique", columnList = "summary_id, position", unique = true)
+                @Index(name = "idx_visual_content_summary_id", columnList = "summary_id"),
+                @Index(name = "idx_visual_content_summary_position_unique", columnList = "summary_id, position", unique = true)
         }
 )
 @Builder
