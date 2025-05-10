@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class SummaryService {
-    private static final String S3_BASE_URL = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/";
+    private static final String S3_BASE_URL = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/";
     private static final String SUMMARIES_PATH = "summaries/";
 
     private final PaperService paperService;
@@ -93,10 +93,11 @@ public class SummaryService {
         // 시각 콘텐츠(figures, tables) 조회
         List<String> figures = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.FIGURE);
         List<String> tables = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.TABLE);
-        log.debug("시각 콘텐츠 조회 완료: summaryId={}, figuresCount={}, tablesCount={}", 
+        log.debug("시각 콘텐츠 조회 완료: summaryId={}, figuresCount={}, tablesCount={}",
                 summaryId, figures.size(), tables.size());
 
-        SummaryEditDetailResponse response = SummaryEditDetailResponse.from(summary, markdownUrl, figures, tables, tags);
+        SummaryEditDetailResponse response = SummaryEditDetailResponse.from(summary, markdownUrl, figures, tables,
+                tags);
         log.debug("요약본 편집을 위한 상세 정보 조회 완료: summaryId={}", summaryId);
 
         return response;
