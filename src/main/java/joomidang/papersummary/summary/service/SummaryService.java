@@ -42,7 +42,7 @@ public class SummaryService {
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
 
-    public void createSummaryFromS3(Long paperId, String s3Key) {
+    public Long createSummaryFromS3(Long paperId, String s3Key) {
         log.info("S3에서 요약 생성 시작: paperId={}", paperId);
         log.debug("전달된 s3Key: {}", s3Key);
 
@@ -52,9 +52,10 @@ public class SummaryService {
 
         Summary summary = createSummary(paper, s3Key);
         connectVisualsToSummary(summary);
-        saveSummary(summary);
+        Summary savedSummary = saveSummary(summary);
 
         log.info("요약 저장 완료: paperId={}, summaryId={}", paperId, summary.getSummaryId());
+        return savedSummary.getSummaryId();
     }
 
     public Summary findById(Long summaryId) {
