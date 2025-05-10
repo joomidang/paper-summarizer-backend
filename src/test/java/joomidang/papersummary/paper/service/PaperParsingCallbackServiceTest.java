@@ -13,13 +13,13 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import joomidang.papersummary.analysislog.entity.AnalysisStage;
 import joomidang.papersummary.analysislog.service.AnalysisLogService;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventEnvelop;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventPublisher;
 import joomidang.papersummary.common.config.rabbitmq.PaperEventType;
 import joomidang.papersummary.common.config.rabbitmq.payload.SummaryRequestedPayload;
+import joomidang.papersummary.common.service.SseService;
 import joomidang.papersummary.paper.controller.request.ParsingResultRequest;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.entity.Status;
@@ -39,6 +39,7 @@ public class PaperParsingCallbackServiceTest {
     private AnalysisLogService analysisLogService;
     private VisualContentService visualContentService;
     private PaperEventPublisher paperEventPublisher;
+    private SseService sseService;
 
     @BeforeEach
     void setUp() {
@@ -46,12 +47,14 @@ public class PaperParsingCallbackServiceTest {
         analysisLogService = mock(AnalysisLogService.class);
         visualContentService = mock(VisualContentService.class);
         paperEventPublisher = mock(PaperEventPublisher.class);
+        sseService = mock(SseService.class);
 
         paperParsingCallbackService = new PaperParsingCallbackService(
                 paperRepository,
                 analysisLogService,
                 visualContentService,
-                paperEventPublisher
+                paperEventPublisher,
+                sseService
         );
     }
 
@@ -63,7 +66,8 @@ public class PaperParsingCallbackServiceTest {
         String title = "Test Paper Title";
         String markdownUrl = "https://example.com/markdown/test-paper.md";
         String contentListUrl = "https://example.com/content-list/test-paper_content_list.json";
-        List<String> figures = Arrays.asList("https://example.com/figures/fig1.png", "https://example.com/figures/fig2.png");
+        List<String> figures = Arrays.asList("https://example.com/figures/fig1.png",
+                "https://example.com/figures/fig2.png");
         List<String> tables = Arrays.asList("https://example.com/tables/table1.png");
 
         ParsingResultRequest request = new ParsingResultRequest(
@@ -94,14 +98,17 @@ public class PaperParsingCallbackServiceTest {
         verify(visualContentService, times(1)).saveAll(eq(mockPaper), eq(figures), eq(VisualContentType.FIGURE));
         verify(visualContentService, times(1)).saveAll(eq(mockPaper), eq(tables), eq(VisualContentType.TABLE));
 
+        // Verify SSE notification
+        verify(sseService, times(1)).sendParsingCompletedEvent(paperId);
+
         // Verify event publishing
         ArgumentCaptor<PaperEventEnvelop> eventCaptor = ArgumentCaptor.forClass(PaperEventEnvelop.class);
         verify(paperEventPublisher, times(1)).publish(eventCaptor.capture());
-        
+
         PaperEventEnvelop<?> capturedEvent = eventCaptor.getValue();
         assert capturedEvent.type() == PaperEventType.SUMMARY_REQUESTED;
         assert capturedEvent.payload() instanceof SummaryRequestedPayload;
-        
+
         SummaryRequestedPayload payload = (SummaryRequestedPayload) capturedEvent.payload();
         assert payload.paperId().equals(paperId);
         assert payload.markdownUrl().equals(markdownUrl);
@@ -130,6 +137,7 @@ public class PaperParsingCallbackServiceTest {
         // Verify no interactions with other services
         verify(analysisLogService, times(0)).markSuccess(anyLong(), any(AnalysisStage.class));
         verify(visualContentService, times(0)).saveAll(any(Paper.class), anyList(), any(VisualContentType.class));
+        verify(sseService, times(0)).sendParsingCompletedEvent(anyLong());
         verify(paperEventPublisher, times(0)).publish(any(PaperEventEnvelop.class));
     }
 
@@ -165,6 +173,9 @@ public class PaperParsingCallbackServiceTest {
 
         // Verify visual content saving is not called with null lists
         verify(visualContentService, times(0)).saveAll(any(Paper.class), anyList(), any(VisualContentType.class));
+
+        // Verify SSE notification still happens
+        verify(sseService, times(1)).sendParsingCompletedEvent(paperId);
 
         // Verify event publishing still happens
         verify(paperEventPublisher, times(1)).publish(any(PaperEventEnvelop.class));
