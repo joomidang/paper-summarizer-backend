@@ -230,7 +230,7 @@ public class SummaryServiceTest {
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
                 .thenReturn(tableUrls);
 
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/original-s3-key.md";
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/original-s3-key.md";
 
         // when
         SummaryEditDetailResponse response = summaryService.getSummaryForEdit(providerUid, summaryId);
@@ -282,7 +282,7 @@ public class SummaryServiceTest {
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
                 .thenReturn(tableUrls);
 
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/draft-s3-key.md";
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/draft-s3-key.md";
 
         // when
         SummaryEditDetailResponse response = summaryService.getSummaryForEdit(providerUid, summaryId);
@@ -352,7 +352,7 @@ public class SummaryServiceTest {
         when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
 
         String s3Key = "summaries/" + summaryId + "/draft-" + System.currentTimeMillis() + ".md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/" + s3Key;
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
         when(s3Service.saveMarkdownToS3(anyString(), eq(request.markdownContent()))).thenReturn(markdownUrl);
 
         // when
@@ -398,7 +398,7 @@ public class SummaryServiceTest {
         when(summaryRepository.save(mockSummary)).thenReturn(mockSummary);
 
         String s3Key = "summaries/" + summaryId + "/publish-" + System.currentTimeMillis() + ".md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/" + s3Key;
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
         when(s3Service.saveMarkdownToS3(anyString(), eq(request.markdownContent()))).thenReturn(markdownUrl);
 
         // when
@@ -426,7 +426,7 @@ public class SummaryServiceTest {
         // given
         Long summaryId = 1L;
         String s3Key = "test-s3-key.md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.bucket.com/" + s3Key;
+        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
         LocalDateTime updatedAt = LocalDateTime.now();
 
         Summary mockSummary = mock(Summary.class);
