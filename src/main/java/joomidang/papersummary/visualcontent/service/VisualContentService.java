@@ -50,8 +50,8 @@ public class VisualContentService {
     }
 
     public void connectToSummary(Summary summary) {
-        Long summaryId = summary.getSummaryId();
-        List<VisualContent> content = visualContentRepository.findByPaperIdAndSummaryIsNull(summaryId);
+        Long paperId = summary.getPaperId();
+        List<VisualContent> content = visualContentRepository.findByPaperIdAndSummaryIsNull(paperId);
         content.forEach(v -> v.connectToSummary(summary));
         visualContentRepository.saveAll(content);
     }
@@ -60,7 +60,7 @@ public class VisualContentService {
      * 요약본에 연결된 시각 콘텐츠를 타입별로 조회
      *
      * @param summary 요약본 엔티티
-     * @param type 시각 콘텐츠 타입 (FIGURE, TABLE)
+     * @param type    시각 콘텐츠 타입 (FIGURE, TABLE)
      * @return 시각 콘텐츠의 URL 목록
      */
     @Transactional(readOnly = true)
@@ -70,7 +70,7 @@ public class VisualContentService {
         List<String> urls = contents.stream()
                 .map(VisualContent::getStorageUrl)
                 .collect(Collectors.toList());
-        log.debug("시각 콘텐츠 조회 완료: summaryId={}, type={}, 조회된 콘텐츠 수={}", 
+        log.debug("시각 콘텐츠 조회 완료: summaryId={}, type={}, 조회된 콘텐츠 수={}",
                 summary.getSummaryId(), type, urls.size());
         return urls;
     }
