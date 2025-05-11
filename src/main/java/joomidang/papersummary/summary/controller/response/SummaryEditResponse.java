@@ -1,5 +1,6 @@
 package joomidang.papersummary.summary.controller.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import lombok.AllArgsConstructor;
@@ -16,6 +17,7 @@ public class SummaryEditResponse {
     private Long summaryId;
     private PublishStatus status;
     private String markdownUrl;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime savedAt;
 
     /**
