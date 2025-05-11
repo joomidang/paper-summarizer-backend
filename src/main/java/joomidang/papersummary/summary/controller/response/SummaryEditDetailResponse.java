@@ -1,6 +1,5 @@
 package joomidang.papersummary.summary.controller.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -24,7 +23,6 @@ public class SummaryEditDetailResponse {
     private List<String> figures;
     private List<String> tables;
     private List<String> tags;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime publishedAt;
     private PublishStatus publishStatus;
 
