@@ -2,6 +2,7 @@ package joomidang.papersummary.visualcontent.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.visualcontent.entity.VisualContent;
@@ -50,10 +51,21 @@ public class VisualContentService {
     }
 
     public void connectToSummary(Summary summary) {
-        Long paperId = summary.getPaperId();
-        List<VisualContent> content = visualContentRepository.findByPaperIdAndSummaryIsNull(paperId);
-        content.forEach(v -> v.connectToSummary(summary));
-        visualContentRepository.saveAll(content);
+        Long summaryId = summary.getPaperId();
+        List<VisualContent> contents = visualContentRepository.findByPaperIdAndSummaryIsNull(summaryId);
+        // 해당 요약본에 이미 연결된 가장 높은 position 값 찾기 (없으면 -1)
+        int maxPosition = visualContentRepository.findMaxPositionBySummaryId(summary.getSummaryId())
+                .orElse(-1);
+
+        // 각 시각 콘텐츠에 대해 incremental position 할당 및 요약본 연결
+        IntStream.range(0, contents.size())
+                .forEach(i -> {
+                    VisualContent content = contents.get(i);
+                    content.updatePosition(maxPosition + i + 1);
+                    content.connectToSummary(summary);
+                });
+
+        visualContentRepository.saveAll(contents);
     }
 
     /**

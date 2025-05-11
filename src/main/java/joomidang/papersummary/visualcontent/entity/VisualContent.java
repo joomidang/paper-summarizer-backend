@@ -67,4 +67,8 @@ public class VisualContent {
     public void connectToSummary(Summary summary) {
         this.summary = summary;
     }
+
+    public void updatePosition(int position) {
+        this.position = position;
+    }
 }
