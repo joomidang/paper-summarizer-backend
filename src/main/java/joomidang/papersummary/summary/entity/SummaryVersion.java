@@ -16,11 +16,13 @@ import java.time.LocalDateTime;
 import joomidang.papersummary.member.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Builder
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@Getter
 @AllArgsConstructor
 @Table(name = "summary_version")
 public class SummaryVersion {
@@ -53,7 +55,8 @@ public class SummaryVersion {
         this.createdAt = LocalDateTime.now();
     }
 
-    public String getS3KeyMd() {
-        return s3KeyMd;
+    public void changeVersionType(VersionType versionType) {
+        this.versionType = versionType;
     }
+
 }

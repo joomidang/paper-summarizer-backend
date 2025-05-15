@@ -181,6 +181,38 @@ public class SummaryService {
         return SummaryDetailResponse.from(summary, markdownUrl, tags);
     }
 
+    /**
+     * 요약본 삭제
+     * - Summary는 소프트 삭제 (isDeleted=true, publishStatus=DELETED)
+     * - SummaryVersion은 모두 하드 삭제 (DRAFT, PUBLISHED 모두 삭제)
+     * - S3에 저장된 파일도 함께 삭제
+     */
+    public void deleteSummary(String providerUid, Long summaryId) {
+        log.debug("요약본 삭제 시작: summaryId={}", summaryId);
+        Member member = memberService.findByProviderUid(providerUid);
+        Summary summary = validateSummaryAccess(summaryId, member);
+
+        // 모든 버전 삭제 (S3에 저장되어있는 파일도 삭제)
+        summaryVersionService.deleteAllVersionBySummary(summary);
+
+        // Summary의 S3 파일 삭제
+        String s3KeyMd = summary.getS3KeyMd();
+        if (s3KeyMd != null && !s3KeyMd.isBlank()) {
+            try {
+                log.debug("요약본 S3 파일 삭제: {}", s3KeyMd);
+                s3Service.deleteFile(s3KeyMd);
+            } catch (Exception e) {
+                log.error("요약본 S3 파일 삭제 중 오류 발생: summaryId={}, s3KeyMd={}, error={}", 
+                        summaryId, s3KeyMd, e.getMessage(), e);
+                // 파일 삭제 실패해도 요약본 삭제는 계속 진행
+            }
+        }
+
+        // 요약본 소프트 삭제
+        summary.softDelete();
+        summaryRepository.save(summary);
+        log.debug("요약본 삭제 완료: summaryId={}", summaryId);
+    }
 
     private void validateS3Key(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
