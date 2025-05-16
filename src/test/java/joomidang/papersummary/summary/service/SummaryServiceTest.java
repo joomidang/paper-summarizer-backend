@@ -477,4 +477,64 @@ public class SummaryServiceTest {
 
         verify(summaryRepository, times(1)).findById(summaryId);
     }
+
+    @Test
+    @DisplayName("요약본 삭제 성공 테스트")
+    void deleteSummarySuccess() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long summaryId = 1L;
+        String s3Key = "test-s3-key.md";
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getS3KeyMd()).thenReturn(s3Key);
+        when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
+        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.save(mockSummary)).thenReturn(mockSummary);
+
+        // when
+        summaryService.deleteSummary(providerUid, summaryId);
+
+        // then
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryVersionService, times(1)).deleteAllVersionBySummary(mockSummary);
+        verify(s3Service, times(1)).deleteFile(s3Key);
+        verify(mockSummary, times(1)).softDelete();
+        verify(summaryRepository, times(1)).save(mockSummary);
+    }
+
+    @Test
+    @DisplayName("권한 없는 사용자의 요약본 삭제 시 예외 발생 테스트")
+    void deleteSummaryAccessDenied() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long summaryId = 1L;
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.isNotSameMemberId(1L)).thenReturn(true); // Different member
+        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+
+        // when & then
+        assertThrows(AccessDeniedException.class, () -> {
+            summaryService.deleteSummary(providerUid, summaryId);
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryVersionService, times(0)).deleteAllVersionBySummary(any(Summary.class));
+        verify(s3Service, times(0)).deleteFile(anyString());
+        verify(mockSummary, times(0)).softDelete();
+        verify(summaryRepository, times(0)).save(any(Summary.class));
+    }
 }
