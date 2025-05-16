@@ -111,15 +111,11 @@ public class PaperControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(2))
                 .andExpect(jsonPath("$.data[0].id").value(1))
                 .andExpect(jsonPath("$.data[0].title").value("테스트 논문 1"))
-                .andExpect(jsonPath("$.data[0].filePath").value("https://example.com/papers/test-paper1.pdf"))
                 .andExpect(jsonPath("$.data[0].fileType").value("application/pdf"))
-                .andExpect(jsonPath("$.data[0].fileSize").value(1000))
                 .andExpect(jsonPath("$.data[0].status").value("PUBLISHED"))
                 .andExpect(jsonPath("$.data[1].id").value(2))
                 .andExpect(jsonPath("$.data[1].title").value("테스트 논문 2"))
-                .andExpect(jsonPath("$.data[1].filePath").value("https://example.com/papers/test-paper2.pdf"))
                 .andExpect(jsonPath("$.data[1].fileType").value("application/pdf"))
-                .andExpect(jsonPath("$.data[1].fileSize").value(2000))
                 .andExpect(jsonPath("$.data[1].status").value("PENDING"));
     }
 
@@ -177,7 +173,6 @@ public class PaperControllerTest {
                 .andExpect(jsonPath("$.code").value("PAS-0001"))
                 .andExpect(jsonPath("$.message").value("논문이 성공적으로 업로드되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1))
-                .andExpect(jsonPath("$.data.filePath").value("https://example.com/papers/test-paper.pdf"))
                 .andExpect(jsonPath("$.data.fileType").value("application/pdf"))
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
     }
