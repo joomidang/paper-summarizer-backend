@@ -8,17 +8,13 @@ import lombok.Getter;
 public class PaperResponse {
     private final Long id;
     private final String title;
-    private final String filePath;
     private final String fileType;
-    private final Long fileSize;
     private final Status status;
 
     public PaperResponse(Paper paper) {
         this.id = paper.getId();
         this.title = paper.getTitle();
-        this.filePath = paper.getFilePath();
         this.fileType = paper.getFileType();
-        this.fileSize = paper.getFileSize();
         this.status = paper.getStatus();
     }
 

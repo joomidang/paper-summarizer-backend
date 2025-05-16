@@ -81,12 +81,8 @@ public class PaperControllerDocumentation extends RestDocsSupport {
                                         .description("논문 ID"),
                                 fieldWithPath("data.title").type(JsonFieldType.STRING)
                                         .description("논문 제목"),
-                                fieldWithPath("data.filePath").type(JsonFieldType.STRING)
-                                        .description("파일 경로"),
                                 fieldWithPath("data.fileType").type(JsonFieldType.STRING)
                                         .description("파일 타입"),
-                                fieldWithPath("data.fileSize").type(JsonFieldType.NUMBER)
-                                        .description("파일 크기 (바이트)"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING)
                                         .description("논문 상태 (PENDING, PROCESSING, ANALYZED, PUBLISHED, FAILED)")
                         )
