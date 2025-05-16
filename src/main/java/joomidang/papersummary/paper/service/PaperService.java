@@ -1,6 +1,7 @@
 package joomidang.papersummary.paper.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import joomidang.papersummary.analysislog.entity.AnalysisLog;
 import joomidang.papersummary.analysislog.entity.AnalysisSourceType;
 import joomidang.papersummary.analysislog.entity.AnalysisStage;
@@ -133,5 +134,10 @@ public class PaperService {
                 .build();
 
         analysisLogRepository.save(analysisLog);
+    }
+
+    public List<Paper> findByProviderUid(String providerUid) {
+        Member member = memberService.findByProviderUid(providerUid);
+        return paperRepository.findAllByMember(member);
     }
 }

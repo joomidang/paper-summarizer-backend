@@ -4,12 +4,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.entity.Status;
@@ -65,6 +67,81 @@ public class PaperControllerTest {
                 .setCustomArgumentResolvers(new TestAuthenticatedArgumentResolver())
                 .setControllerAdvice(new PaperExceptionHandler())
                 .build();
+    }
+
+    @Test
+    @DisplayName("사용자의 논문 목록 조회 성공 테스트")
+    void getListMyPapersSuccess() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+
+        // 논문 객체 두 개 생성
+        Paper paper1 = Paper.builder()
+                .id(1L)
+                .title("테스트 논문 1")
+                .filePath("https://example.com/papers/test-paper1.pdf")
+                .fileType("application/pdf")
+                .fileSize(1000L)
+                .status(Status.PUBLISHED)
+                .build();
+
+        Paper paper2 = Paper.builder()
+                .id(2L)
+                .title("테스트 논문 2")
+                .filePath("https://example.com/papers/test-paper2.pdf")
+                .fileType("application/pdf")
+                .fileSize(2000L)
+                .status(Status.PENDING)
+                .build();
+
+        List<Paper> papers = List.of(paper1, paper2);
+
+        // PaperService Mock 설정
+        when(paperService.findByProviderUid(eq(providerUid))).thenReturn(papers);
+
+        // when & then
+        mockMvc.perform(get("/api/papers")
+                        .header("X-AUTH-ID", providerUid)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("PAS-0005"))
+                .andExpect(jsonPath("$.message").value("논문 정보를 성공적으로 조회했습니다."))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].id").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("테스트 논문 1"))
+                .andExpect(jsonPath("$.data[0].filePath").value("https://example.com/papers/test-paper1.pdf"))
+                .andExpect(jsonPath("$.data[0].fileType").value("application/pdf"))
+                .andExpect(jsonPath("$.data[0].fileSize").value(1000))
+                .andExpect(jsonPath("$.data[0].status").value("PUBLISHED"))
+                .andExpect(jsonPath("$.data[1].id").value(2))
+                .andExpect(jsonPath("$.data[1].title").value("테스트 논문 2"))
+                .andExpect(jsonPath("$.data[1].filePath").value("https://example.com/papers/test-paper2.pdf"))
+                .andExpect(jsonPath("$.data[1].fileType").value("application/pdf"))
+                .andExpect(jsonPath("$.data[1].fileSize").value(2000))
+                .andExpect(jsonPath("$.data[1].status").value("PENDING"));
+    }
+
+    @Test
+    @DisplayName("사용자의 논문 목록이 비어있는 경우 테스트")
+    void getListMyPapersEmptyList() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+
+        // 빈 목록 반환하도록 설정
+        when(paperService.findByProviderUid(eq(providerUid))).thenReturn(List.of());
+
+        // when & then
+        mockMvc.perform(get("/api/papers")
+                        .header("X-AUTH-ID", providerUid)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("PAS-0005"))
+                .andExpect(jsonPath("$.message").value("논문 정보를 성공적으로 조회했습니다."))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test
