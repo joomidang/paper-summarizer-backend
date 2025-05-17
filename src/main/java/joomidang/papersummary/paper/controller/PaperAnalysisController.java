@@ -26,8 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/papers")
-@Tag(name = "Paper Analysis", description = "논문 분석 APIs")
-
+@Tag(name = "Paper", description = "논문 분석 관련 API")
 public class PaperAnalysisController {
 
     private final PaperAnalysisService paperAnalysisService;

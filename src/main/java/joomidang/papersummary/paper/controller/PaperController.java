@@ -28,7 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/papers")
-@Tag(name = "Paper", description = "논문 업로드 APIs")
+@Tag(name = "Paper", description = "논문 분석 관련 API")
 public class PaperController {
 
     private final PaperService paperService;

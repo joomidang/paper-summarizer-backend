@@ -26,7 +26,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RestController
 @RequestMapping("/api/papers")
 @RequiredArgsConstructor
-@Tag(name = "Paper Analysis Events", description = "논문 분석 실시간 이벤트 관련 API")
+@Tag(name = "Paper", description = "논문 분석 관련 API")
 public class PaperAnalysisEventController {
 
     private final SseService sseService;

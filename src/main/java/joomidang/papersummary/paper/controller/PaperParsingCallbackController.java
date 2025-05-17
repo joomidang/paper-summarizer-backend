@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/papers")
-@Tag(name = "Paper Parsing Callback", description = "외부 논문 파싱 서비스의 콜백 API")
+@Tag(name = "Paper", description = "논문 분석 관련 API")
 public class PaperParsingCallbackController {
     private final PaperParsingCallbackService paperParsingCallbackService;
 
