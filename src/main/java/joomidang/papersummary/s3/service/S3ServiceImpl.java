@@ -95,7 +95,7 @@ public class S3ServiceImpl implements S3Service {
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(summaryBucketName)
                     .key(key)
-                    .contentType("text/markdown")
+                    .contentType("text/plain; charset=UTF-8")
                     .build();
 
             s3Client.putObject(request, RequestBody.fromBytes(markdownContent.getBytes(StandardCharsets.UTF_8)));

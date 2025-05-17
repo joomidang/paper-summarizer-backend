@@ -86,4 +86,10 @@ public class Summary extends BaseTimeEntity {
         this.publishStatus = PublishStatus.PUBLISHED;
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void softDelete() {
+        this.isDeleted = true;
+        this.updatedAt = LocalDateTime.now();
+        this.publishStatus = PublishStatus.DELETED;
+    }
 }

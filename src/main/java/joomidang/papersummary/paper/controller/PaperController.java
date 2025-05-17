@@ -1,5 +1,6 @@
 package joomidang.papersummary.paper.controller;
 
+import static joomidang.papersummary.paper.controller.response.PaperSuccessCode.FETCH_SUCCESS;
 import static joomidang.papersummary.paper.controller.response.PaperSuccessCode.UPLOAD_SUCCESS;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.paper.controller.response.PaperResponse;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.Parent;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -32,6 +35,15 @@ import org.springframework.web.multipart.MultipartFile;
 public class PaperController {
 
     private final PaperService paperService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PaperResponse>>> getListMyPapers(@Authenticated String providerUid) {
+        List<Paper> papers = paperService.findByProviderUid(providerUid);
+        List<PaperResponse> paperResponses = papers.stream()
+                .map(PaperResponse::of)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.successWithData(FETCH_SUCCESS, paperResponses));
+    }
 
     // swagger 설정
     @Operation(summary = "논문 업로드", description = "논문 분석을 위한 파일 업로드")
@@ -93,7 +105,7 @@ public class PaperController {
             )
             @RequestPart("file") MultipartFile file) {
 
-        log.info("논문 업로드 요청 시작: fileName={}, fileSize={}, providerUid={}", 
+        log.info("논문 업로드 요청 시작: fileName={}, fileSize={}, providerUid={}",
                 file.getOriginalFilename(), file.getSize(), providerUid);
         log.debug("논문 업로드 컨트롤러 진입: contentType={}", file.getContentType());
 
@@ -105,7 +117,7 @@ public class PaperController {
             return ResponseEntity.ok()
                     .body(ApiResponse.successWithData(UPLOAD_SUCCESS, PaperResponse.of(savedPaper)));
         } catch (Exception e) {
-            log.error("논문 업로드 처리 실패: fileName={}, 오류={}", 
+            log.error("논문 업로드 처리 실패: fileName={}, 오류={}",
                     file.getOriginalFilename(), e.getMessage(), e);
             throw e;
         }

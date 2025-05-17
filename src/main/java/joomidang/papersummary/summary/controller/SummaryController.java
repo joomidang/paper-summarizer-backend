@@ -20,6 +20,7 @@ import joomidang.papersummary.summary.service.SummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,6 +86,18 @@ public class SummaryController {
 
         log.debug("요약본 편집을 위한 상세 정보 조회 응답: summaryId={}", summaryId);
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
+
+    /**
+     * 요약본 삭제
+     */
+    @DeleteMapping("/{summaryId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSummary(
+            @Authenticated String providerUid,
+            @PathVariable Long summaryId) {
+        log.debug("요약본 삭제 요청 : summaryId={}, providerUid={}", summaryId, providerUid);
+        summaryService.deleteSummary(providerUid, summaryId);
+        return ResponseEntity.ok(ApiResponse.success(SummarySuccessCode.SUMMARY_DELETED));
     }
 
     /**

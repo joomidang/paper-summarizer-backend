@@ -4,14 +4,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import joomidang.papersummary.member.entity.Member;
+import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.entity.VersionType;
@@ -25,11 +30,13 @@ public class SummaryVersionServiceTest {
 
     private SummaryVersionService summaryVersionService;
     private SummaryVersionRepository summaryVersionRepository;
+    private S3Service s3Service;
 
     @BeforeEach
     void setUp() {
         summaryVersionRepository = mock(SummaryVersionRepository.class);
-        summaryVersionService = new SummaryVersionService(summaryVersionRepository);
+        s3Service = mock(S3Service.class);
+        summaryVersionService = new SummaryVersionService(summaryVersionRepository, s3Service);
     }
 
     @Test
@@ -161,5 +168,63 @@ public class SummaryVersionServiceTest {
         assertTrue(result.isEmpty());
         verify(summaryVersionRepository, times(1))
                 .findTopBySummaryIdAndVersionTypeOrderByCreatedAtDesc(summaryId, VersionType.DRAFT);
+    }
+
+    @Test
+    @DisplayName("요약본의 모든 버전 삭제 테스트")
+    void deleteAllVersionBySummaryTest() {
+        // given
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(1L);
+
+        // Create mock draft versions
+        SummaryVersion draftVersion1 = mock(SummaryVersion.class);
+        when(draftVersion1.getId()).thenReturn(1L);
+        when(draftVersion1.getS3KeyMd()).thenReturn("draft-s3-key-1.md");
+        when(draftVersion1.getVersionType()).thenReturn(VersionType.DRAFT);
+
+        SummaryVersion draftVersion2 = mock(SummaryVersion.class);
+        when(draftVersion2.getId()).thenReturn(2L);
+        when(draftVersion2.getS3KeyMd()).thenReturn("draft-s3-key-2.md");
+        when(draftVersion2.getVersionType()).thenReturn(VersionType.DRAFT);
+
+        List<SummaryVersion> draftVersions = Arrays.asList(draftVersion1, draftVersion2);
+
+        // Create mock published versions
+        SummaryVersion publishedVersion = mock(SummaryVersion.class);
+        when(publishedVersion.getId()).thenReturn(3L);
+        when(publishedVersion.getS3KeyMd()).thenReturn("published-s3-key.md");
+        when(publishedVersion.getVersionType()).thenReturn(VersionType.PUBLISHED);
+
+        List<SummaryVersion> publishedVersions = Arrays.asList(publishedVersion);
+
+        // Mock repository responses
+        when(summaryVersionRepository.findBySummaryAndVersionTypeOrderByCreatedAtDesc(
+                mockSummary, VersionType.DRAFT)).thenReturn(draftVersions);
+        when(summaryVersionRepository.findBySummaryAndVersionTypeOrderByCreatedAtDesc(
+                mockSummary, VersionType.PUBLISHED)).thenReturn(publishedVersions);
+
+        // Mock S3 service
+        doNothing().when(s3Service).deleteFile(anyString());
+
+        // when
+        summaryVersionService.deleteAllVersionBySummary(mockSummary);
+
+        // then
+        // Verify repository calls
+        verify(summaryVersionRepository, times(1))
+                .findBySummaryAndVersionTypeOrderByCreatedAtDesc(mockSummary, VersionType.DRAFT);
+        verify(summaryVersionRepository, times(1))
+                .findBySummaryAndVersionTypeOrderByCreatedAtDesc(mockSummary, VersionType.PUBLISHED);
+
+        // Verify S3 file deletions
+        verify(s3Service, times(1)).deleteFile("draft-s3-key-1.md");
+        verify(s3Service, times(1)).deleteFile("draft-s3-key-2.md");
+        verify(s3Service, times(1)).deleteFile("published-s3-key.md");
+
+        // Verify version deletions
+        verify(summaryVersionRepository, times(1)).delete(draftVersion1);
+        verify(summaryVersionRepository, times(1)).delete(draftVersion2);
+        verify(summaryVersionRepository, times(1)).delete(publishedVersion);
     }
 }

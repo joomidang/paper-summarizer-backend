@@ -1,6 +1,8 @@
 package joomidang.papersummary.paper.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 import joomidang.papersummary.analysislog.entity.AnalysisLog;
 import joomidang.papersummary.analysislog.entity.AnalysisSourceType;
 import joomidang.papersummary.analysislog.entity.AnalysisStage;
@@ -107,7 +109,8 @@ public class PaperService {
     private Paper createAndSavePaper(MultipartFile file, String s3Url, Member member) {
         log.info("Paper 엔티티 생성 및 저장 중: {}", file.getOriginalFilename());
         Paper paper = Paper.builder()
-                .title(null) // 메타데이터 없이 저장
+                .title(Objects.requireNonNull(file.getOriginalFilename())
+                        .substring(0, file.getOriginalFilename().lastIndexOf('.')))//사용자가 업로드한 파일 제목
                 .filePath(s3Url)
                 .fileType(file.getContentType())
                 .fileSize(file.getSize())
@@ -133,5 +136,10 @@ public class PaperService {
                 .build();
 
         analysisLogRepository.save(analysisLog);
+    }
+
+    public List<Paper> findByProviderUid(String providerUid) {
+        Member member = memberService.findByProviderUid(providerUid);
+        return paperRepository.findAllByMember(member);
     }
 }
