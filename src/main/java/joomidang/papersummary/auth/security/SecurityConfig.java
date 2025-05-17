@@ -27,6 +27,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
+                "http://localhost:8080",
                 "https://paper-summarizer-frontend.vercel.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -52,7 +53,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**",
                                 "/api/papers/*/callback",
-                                "/api/papers/*/events") //TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
+                                "/api/papers/*/events",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/api-docs/**",
+                                "/api/debug/**",
+                                "/v3/api-docs/**") //TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
                         .permitAll()
                         .anyRequest().authenticated()
                 )
