@@ -57,3 +57,19 @@ logging:
   level:
     joomidang.papersummary: info #필요시 info, trace
     org.hibernate.sql: debug #SQL 쿼리 로깅
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+    doc-expansion: none
+  api-docs:
+    path: /api-docs
+  paths-to-match:
+    - /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

@@ -1,5 +1,6 @@
 package joomidang.papersummary.auth.config;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
 import java.util.Collections;
 import joomidang.papersummary.auth.dto.TokenDto;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Profile("local")
+@Tag(name = "Test", description = "Local Test User Configuration")
 @RequiredArgsConstructor
 public class TestUserConfig {
 
@@ -41,7 +43,9 @@ public class TestUserConfig {
     /**
      * 애플리케이션 시작 시 테스트 사용자와 토큰을 생성한다.
      */
+
     @PostConstruct
+
     public void init() {
         log.info("로컬 환경용 테스트 사용자 및 토큰 생성 시작");
         createTestUser();

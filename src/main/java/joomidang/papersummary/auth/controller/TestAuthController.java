@@ -1,5 +1,7 @@
 package joomidang.papersummary.auth.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import joomidang.papersummary.auth.config.TestUserConfig;
 import joomidang.papersummary.auth.controller.response.TestAuthSuccessCode;
 import joomidang.papersummary.auth.dto.TokenDto;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth/test")
 @Profile("local")
 @RequiredArgsConstructor
+@Tag(name = "Test Auth", description = "테스트용 인증 API")
 public class TestAuthController {
 
     private final TestUserConfig testUserConfig;
@@ -34,6 +37,7 @@ public class TestAuthController {
      * <p>
      * 로컬 환경에서 로그인 과정 없이 인증이 필요한 API를 테스트할 때 사용할 수 있다.
      */
+    @Operation(summary = "테스트용 토큰 발급", description = "인증 과정 없이 API 테스트를 위한 JWT 토큰을 발급합니다. ")
     @GetMapping("/token")
     public ResponseEntity<ApiResponse<TokenDto>> getTestToken() {
         log.info("테스트 토큰 조회 요청");
@@ -44,6 +48,7 @@ public class TestAuthController {
     /**
      * 테스트 사용자 정보를 조회한다.
      */
+    @Operation(summary = "테스트 사용자 정보 조회", description = "테스트 사용자의 정보를 조회합니다. ")
     @GetMapping("/user")
     public ResponseEntity<ApiResponse<TestUserResponse>> getTestUser() {
         log.info("테스트 사용자 정보 조회 요청");
