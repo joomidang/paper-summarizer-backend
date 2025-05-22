@@ -1,5 +1,6 @@
 package joomidang.papersummary.summary.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -53,12 +54,6 @@ public class Summary extends BaseTimeEntity {
     @Column(name = "publish_status", nullable = false)
     private PublishStatus publishStatus;
 
-    @Column(name = "view_count", nullable = false)
-    private Integer viewCount;
-
-    @Column(name = "like_count", nullable = false)
-    private Integer likeCount;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
@@ -67,12 +62,40 @@ public class Summary extends BaseTimeEntity {
     @JoinColumn(name = "paper_id", unique = true)
     private Paper paper;
 
+    @OneToOne(mappedBy = "summary", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private SummaryStats summaryStats;
+
+    // SummaryStats 초기화 메서드 추가
+    public void initializeSummaryStats() {
+        if (this.summaryStats == null) {
+            this.summaryStats = SummaryStats.builder()
+                    .summary(this)
+                    .viewCount(0)
+                    .likeCount(0)
+                    .commentCount(0)
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+        }
+    }
+
     public Long getSummaryId() {
         return id;
     }
 
     public Long getPaperId() {
         return paper.getId();
+    }
+
+    public Integer getViewCount() {
+        return summaryStats != null ? summaryStats.getViewCount() : 0;
+    }
+
+    public Integer getLikeCount() {
+        return summaryStats != null ? summaryStats.getLikeCount() : 0;
+    }
+
+    public Integer getCommentCount() {
+        return summaryStats != null ? summaryStats.getCommentCount() : 0;
     }
 
     public boolean isNotSameMemberId(Long memberId) {

@@ -16,10 +16,12 @@ import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.entity.SummaryStats;
 import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
+import joomidang.papersummary.summary.repository.SummaryStatsRepository;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class SummaryService {
     private static final String S3_BASE_URL = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/";
@@ -37,11 +39,13 @@ public class SummaryService {
 
     private final PaperService paperService;
     private final SummaryRepository summaryRepository;
+    private final SummaryStatsRepository summaryStatsRepository;
     private final VisualContentService visualContentService;
     private final MemberService memberService;
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
 
+    @Transactional
     public Long createSummaryFromS3(Long paperId, String s3Key) {
         log.info("S3에서 요약 생성 시작: paperId={}", paperId);
         log.debug("전달된 s3Key: {}", s3Key);
@@ -50,7 +54,7 @@ public class SummaryService {
         Paper paper = findPaper(paperId);
         checkExistingSummary(paper);
 
-        Summary summary = createSummary(paper, s3Key);
+        Summary summary = createSummaryWithStats(paper, s3Key);
         connectVisualsToSummary(summary);
         Summary savedSummary = saveSummary(summary);
 
@@ -58,17 +62,100 @@ public class SummaryService {
         return savedSummary.getSummaryId();
     }
 
-    public Summary findById(Long summaryId) {
-        log.debug("요약 정보 조회 시작: summaryId={}", summaryId);
+    /**
+     * 요약본 편집 내용 저장
+     */
+    @Transactional
+    public SummaryEditResponse saveSummaryEdit(String providerUid, Long summaryId, SummaryEditRequest request) {
+        log.debug("요약본 편집 내용 저장 시작: summaryId={}", summaryId);
+        Member member = memberService.findByProviderUid(providerUid);
+        Summary summary = validateSummaryAccess(summaryId, member);
 
-        Summary summary = summaryRepository.findById(summaryId)
-                .orElseThrow(() -> {
-                    log.error("요약 정보를 찾을 수 없음: summaryId={}", summaryId);
-                    return new SummaryNotFoundException(summaryId);
-                });
+        // 요약본 정보 업데이트
+        String key = generateS3Key(summaryId, "draft");
+        String markdownUrl = s3Service.saveMarkdownToS3(key, request.markdownContent());
 
-        log.debug("요약 정보 조회 완료: summaryId={}", summaryId);
-        return summary;
+        summaryVersionService.createDraftVersion(summary, key, request.title(), member);
+
+        // 태그 저장
+        // TODO: 태그 저장 로직 구현 필요
+
+        SummaryEditResponse response = SummaryEditResponse.of(
+                summaryId,
+                summary.getPublishStatus(),
+                markdownUrl,
+                LocalDateTime.now()
+        );
+
+        log.debug("요약본 편집 내용 저장 완료: summaryId={}", summaryId);
+        return response;
+    }
+
+    /**
+     * 요약본 업로드
+     */
+    @Transactional
+    public SummaryPublishResponse publishSummary(String providerUid, Long summaryId, SummaryEditRequest request) {
+        log.debug("요약본 발행 시작: summaryId={}", summaryId);
+        Member member = memberService.findByProviderUid(providerUid);
+        Summary summary = validateSummaryAccess(summaryId, member);
+
+        // S3에 마크다운 저장
+        String s3Key = generateS3Key(summaryId, "publish");
+        String markdownUrl = s3Service.saveMarkdownToS3(s3Key, request.markdownContent());
+
+        // summary version 저장
+        summaryVersionService.createPublishedVersion(summary, s3Key, request.title(), member);
+
+        // summary 테이블 업데이트
+        summary.publish(
+                request.title(),
+                request.brief(),
+                s3Key
+        );
+        saveSummary(summary);
+
+        return SummaryPublishResponse.of(
+                summary.getId(),
+                summary.getTitle(),
+                markdownUrl,
+                summary.getUpdatedAt()
+        );
+    }
+
+    /**
+     * 요약본 삭제 - Summary는 소프트 삭제 (isDeleted=true, publishStatus=DELETED) - SummaryVersion은 모두 하드 삭제 (DRAFT, PUBLISHED 모두
+     * 삭제) - S3에 저장된 파일도 함께 삭제
+     */
+    @Transactional
+    public void deleteSummary(String providerUid, Long summaryId) {
+        log.debug("요약본 삭제 시작: summaryId={}", summaryId);
+        Member member = memberService.findByProviderUid(providerUid);
+        Summary summary = validateSummaryAccess(summaryId, member);
+
+        //통계 삭제
+        summaryStatsRepository.deleteBySummaryId(summaryId);
+
+        // 모든 버전 삭제 (S3에 저장되어있는 파일도 삭제)
+        summaryVersionService.deleteAllVersionBySummary(summary);
+
+        // Summary의 S3 파일 삭제
+        String s3KeyMd = summary.getS3KeyMd();
+        if (s3KeyMd != null && !s3KeyMd.isBlank()) {
+            try {
+                log.debug("요약본 S3 파일 삭제: {}", s3KeyMd);
+                s3Service.deleteFile(s3KeyMd);
+            } catch (Exception e) {
+                log.error("요약본 S3 파일 삭제 중 오류 발생: summaryId={}, s3KeyMd={}, error={}",
+                        summaryId, s3KeyMd, e.getMessage(), e);
+                // 파일 삭제 실패해도 요약본 삭제는 계속 진행
+            }
+        }
+
+        // 요약본 소프트 삭제
+        summary.softDelete();
+        summaryRepository.save(summary);
+        log.debug("요약본 삭제 완료: summaryId={}", summaryId);
     }
 
     /**
@@ -105,68 +192,10 @@ public class SummaryService {
     }
 
     /**
-     * 요약본 편집 내용 저장
+     * 요약본 단건 조회
      */
-    public SummaryEditResponse saveSummaryEdit(String providerUid, Long summaryId, SummaryEditRequest request) {
-        log.debug("요약본 편집 내용 저장 시작: summaryId={}", summaryId);
-        Member member = memberService.findByProviderUid(providerUid);
-        Summary summary = validateSummaryAccess(summaryId, member);
-
-        // 요약본 정보 업데이트
-        String key = generateS3Key(summaryId, "draft");
-        String markdownUrl = s3Service.saveMarkdownToS3(key, request.markdownContent());
-
-        summaryVersionService.createDraftVersion(summary, key, request.title(), member);
-
-        // 태그 저장
-        // TODO: 태그 저장 로직 구현 필요
-
-        SummaryEditResponse response = SummaryEditResponse.of(
-                summaryId,
-                summary.getPublishStatus(),
-                markdownUrl,
-                LocalDateTime.now()
-        );
-
-        log.debug("요약본 편집 내용 저장 완료: summaryId={}", summaryId);
-        return response;
-    }
-
-    /**
-     * 요약본 업로드
-     */
-    public SummaryPublishResponse publishSummary(String providerUid, Long summaryId, SummaryEditRequest request) {
-        log.debug("요약본 발행 시작: summaryId={}", summaryId);
-        Member member = memberService.findByProviderUid(providerUid);
-        Summary summary = validateSummaryAccess(summaryId, member);
-
-        // S3에 마크다운 저장
-        String s3Key = generateS3Key(summaryId, "publish");
-        String markdownUrl = s3Service.saveMarkdownToS3(s3Key, request.markdownContent());
-
-        // summary version 저장
-        summaryVersionService.createPublishedVersion(summary, s3Key, request.title(), member);
-
-        // summary 테이블 업데이트
-        summary.publish(
-                request.title(),
-                request.brief(),
-                s3Key
-        );
-        saveSummary(summary);
-
-        return SummaryPublishResponse.of(
-                summary.getId(),
-                summary.getTitle(),
-                markdownUrl,
-                summary.getUpdatedAt()
-        );
-    }
-
-    //요약본 단건 조회
-    @Transactional(readOnly = true)
     public SummaryDetailResponse getSummaryDetail(Long summaryId) {
-        Summary summary = findById(summaryId);
+        Summary summary = findByIdWithStats(summaryId);
 
         if (summary.getPublishStatus() != PublishStatus.PUBLISHED) {
             throw new AccessDeniedException("발행되지 않은 요약본은 조회할 수 없습니다.");
@@ -181,38 +210,24 @@ public class SummaryService {
         return SummaryDetailResponse.from(summary, markdownUrl, tags);
     }
 
-    /**
-     * 요약본 삭제
-     * - Summary는 소프트 삭제 (isDeleted=true, publishStatus=DELETED)
-     * - SummaryVersion은 모두 하드 삭제 (DRAFT, PUBLISHED 모두 삭제)
-     * - S3에 저장된 파일도 함께 삭제
-     */
-    public void deleteSummary(String providerUid, Long summaryId) {
-        log.debug("요약본 삭제 시작: summaryId={}", summaryId);
-        Member member = memberService.findByProviderUid(providerUid);
-        Summary summary = validateSummaryAccess(summaryId, member);
+    public Summary findByIdWithStats(Long summaryId) {
+        log.debug("요약 정보 조회 시작: summaryId={}", summaryId);
 
-        // 모든 버전 삭제 (S3에 저장되어있는 파일도 삭제)
-        summaryVersionService.deleteAllVersionBySummary(summary);
+        Summary summary = summaryRepository.findByIdWithStats(summaryId)
+                .orElseThrow(() -> {
+                    log.error("요약 정보를 찾을 수 없음: summaryId={}", summaryId);
+                    return new SummaryNotFoundException(summaryId);
+                });
 
-        // Summary의 S3 파일 삭제
-        String s3KeyMd = summary.getS3KeyMd();
-        if (s3KeyMd != null && !s3KeyMd.isBlank()) {
-            try {
-                log.debug("요약본 S3 파일 삭제: {}", s3KeyMd);
-                s3Service.deleteFile(s3KeyMd);
-            } catch (Exception e) {
-                log.error("요약본 S3 파일 삭제 중 오류 발생: summaryId={}, s3KeyMd={}, error={}", 
-                        summaryId, s3KeyMd, e.getMessage(), e);
-                // 파일 삭제 실패해도 요약본 삭제는 계속 진행
-            }
-        }
-
-        // 요약본 소프트 삭제
-        summary.softDelete();
-        summaryRepository.save(summary);
-        log.debug("요약본 삭제 완료: summaryId={}", summaryId);
+        log.debug("요약 정보 조회 완료: summaryId={}", summaryId);
+        return summary;
     }
+
+    public Summary findByIdWithoutStats(Long summaryId) {
+        return summaryRepository.findByIdWithoutStats(summaryId)
+                .orElseThrow(() -> new SummaryNotFoundException(summaryId));
+    }
+
 
     private void validateS3Key(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
@@ -238,18 +253,28 @@ public class SummaryService {
         log.debug("기존 요약 없음, 새 요약 생성 진행");
     }
 
-    private Summary createSummary(Paper paper, String s3Key) {
+    private Summary createSummaryWithStats(Paper paper, String s3Key) {
         log.debug("요약 엔티티 생성: title={}, s3KeyMd={}, memberId={}",
                 paper.getTitle(), s3Key, paper.getMember().getId());
-        return Summary.builder()
-                .title(paper.getTitle())
-                .s3KeyMd(s3Key)
-                .publishStatus(PublishStatus.DRAFT)
+        Summary summary = getSummary(paper, s3Key);
+        Summary savedSummary = summaryRepository.save(summary);
+        SummaryStats summaryStats = SummaryStats.builder()
+                .summary(savedSummary)
                 .viewCount(0)
                 .likeCount(0)
-                .paper(paper)
-                .member(paper.getMember())
+                .commentCount(0)
+                .updatedAt(LocalDateTime.now())
                 .build();
+        summaryStatsRepository.save(summaryStats);
+        savedSummary.initializeSummaryStats();
+        return savedSummary;
+    }
+
+    private Summary saveSummary(Summary summary) {
+        log.debug("요약본 저장 시작: summaryId={}", summary.getId());
+        Summary savedSummary = summaryRepository.save(summary);
+        log.debug("요약본 저장 완료: summaryId={}", savedSummary.getId());
+        return savedSummary;
     }
 
     private void connectVisualsToSummary(Summary summary) {
@@ -263,7 +288,7 @@ public class SummaryService {
     }
 
     private Summary validateSummaryAccess(Long summaryId, Member requester) {
-        Summary summary = findById(summaryId);
+        Summary summary = findByIdWithoutStats(summaryId);
         validateAccess(summary, requester);
         return summary;
     }
@@ -276,10 +301,13 @@ public class SummaryService {
         return SUMMARIES_PATH + summaryId + "/" + prefix + "-" + System.currentTimeMillis() + ".md";
     }
 
-    private Summary saveSummary(Summary summary) {
-        log.debug("요약본 저장 시작: summaryId={}", summary.getId());
-        Summary savedSummary = summaryRepository.save(summary);
-        log.debug("요약본 저장 완료: summaryId={}", savedSummary.getId());
-        return savedSummary;
+    private Summary getSummary(Paper paper, String s3Key) {
+        return Summary.builder()
+                .title(paper.getTitle())
+                .s3KeyMd(s3Key)
+                .publishStatus(PublishStatus.DRAFT)
+                .paper(paper)
+                .member(paper.getMember())
+                .build();
     }
 }
