@@ -53,13 +53,27 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**",
                                 "/api/papers/*/callback",
-                                "/api/papers/*/events",
+                                "/api/papers/*/events",//TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
                                 "/api/debug/**",
-                                "/v3/api-docs/**") //TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
+                                "/v3/api-docs/**",
+                                "/favicon.ico",
+                                "/robots.txt")
                         .permitAll()
+                        .requestMatchers(
+                                "/setup.cgi",
+                                "/boaform/**",
+                                "/manager/**",
+                                "/get.php",
+                                "/download/**",
+                                "/ads.txt",
+                                "/app-ads.txt",
+                                "/sitemap.xml",
+                                "/sellers.json",
+                                "/geoserver/**"
+                        ).denyAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(tokenProvider),
