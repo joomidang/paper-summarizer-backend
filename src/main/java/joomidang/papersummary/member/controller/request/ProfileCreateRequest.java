@@ -24,5 +24,5 @@ public class ProfileCreateRequest {
     private String profileImageUrl;
     
     @NotEmpty(message = "관심분야는 최소 1개 이상 입력해야 합니다.")
-    private List<String> interests;
+    private List<@NotBlank(message = "관심분야는 빈 값이 될 수 없습니다.") String> interests;
 }

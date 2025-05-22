@@ -172,4 +172,8 @@ public class MemberService {
             }
         }
     }
+    public void validateUsernameDuplicate(String username, Long memberId) {
+        checkUsernameDuplicate(username, memberId);
+    }
+
 }
