@@ -26,10 +26,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:8080",
-                "https://paper-summarizer-frontend.vercel.app",
-                "https://your-server-domain.com"
+                "http://localhost:3000", // front dev
+                "http://localhost:8080", // local
+                "https://paper-summarizer-frontend.vercel.app" // product
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
