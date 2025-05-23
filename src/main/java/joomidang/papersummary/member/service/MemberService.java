@@ -166,7 +166,7 @@ public class MemberService {
         } else {
             // 기존 회원이 닉네임 변경 시 (본인 제외 중복 체크)
             boolean exists = memberRepository.existsByNameAndId(username, memberId);
-            log.info("기존 회원 닉네임 중복 여부(본인 제외): {}", exists);
+            log.info("기존 회원 닉네임 중복 여부: {}", exists);
             if (exists) {
                 throw new MemberDuplicateException("이미 사용 중인 닉네임입니다.");
             }
