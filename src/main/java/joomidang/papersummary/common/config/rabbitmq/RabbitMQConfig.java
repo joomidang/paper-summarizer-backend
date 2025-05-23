@@ -29,6 +29,11 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_SUMMARY = "SUMMARY_REQUESTED";
     public static final String ROUTING_KEY_COMPLETE = "SUMMARY_COMPLETED";
 
+    //통계용(조회, 좋아요, 댓글) 추가
+    //TODO: 추후에 조회수는 Redis + 스케줄러 도입해서 DB 쓰기 부하 줄이도록 개선
+    public static final String STATS_QUEUE = "stats.queue";
+    public static final String ROUTING_KEY_STATS = "STATS_REQUESTED";
+
     @Bean
     public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -80,6 +85,18 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(completeQueue())
                 .to(paperExchange())
                 .with(ROUTING_KEY_COMPLETE);
+    }
+
+    @Bean
+    public Queue statsQueue() {
+        return new Queue(STATS_QUEUE, true);
+    }
+
+    @Bean
+    public Binding statsBinding(Queue statsQueue, DirectExchange paperExchange) {
+        return BindingBuilder.bind(statsQueue)
+                .to(paperExchange)
+                .with(ROUTING_KEY_STATS);
     }
 
     @Bean(name = "rabbitListenerContainerFactory")
