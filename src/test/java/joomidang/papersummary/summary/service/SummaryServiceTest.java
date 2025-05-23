@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
@@ -52,7 +53,8 @@ public class SummaryServiceTest {
     private MemberService memberService;
     private S3Service s3Service;
     private SummaryVersionService summaryVersionService;
-
+    private StatsEventPublisher statsEventPublisher;
+    
     @BeforeEach
     void setUp() {
         paperService = mock(PaperService.class);
@@ -62,6 +64,7 @@ public class SummaryServiceTest {
         memberService = mock(MemberService.class);
         s3Service = mock(S3Service.class);
         summaryVersionService = mock(SummaryVersionService.class);
+        statsEventPublisher = mock(StatsEventPublisher.class);
 
         summaryService = new SummaryService(
                 paperService,
@@ -70,7 +73,8 @@ public class SummaryServiceTest {
                 visualContentService,
                 memberService,
                 s3Service,
-                summaryVersionService
+                summaryVersionService,
+                statsEventPublisher
         );
     }
 
