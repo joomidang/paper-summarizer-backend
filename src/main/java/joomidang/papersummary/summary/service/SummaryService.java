@@ -3,6 +3,8 @@ package joomidang.papersummary.summary.service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
+import joomidang.papersummary.common.config.rabbitmq.StatsType;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
@@ -13,6 +15,7 @@ import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
+import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
@@ -44,6 +47,7 @@ public class SummaryService {
     private final MemberService memberService;
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
+    private final StatsEventPublisher statsEventPublisher;
 
     @Transactional
     public Long createSummaryFromS3(Long paperId, String s3Key) {
@@ -207,6 +211,7 @@ public class SummaryService {
         // TODO: 태그 조회 로직 구현 필요
         List<String> tags = Collections.emptyList();
 
+        statsEventPublisher.publish(summaryId, StatsType.VIEW);
         return SummaryDetailResponse.from(summary, markdownUrl, tags);
     }
 
@@ -228,6 +233,15 @@ public class SummaryService {
                 .orElseThrow(() -> new SummaryNotFoundException(summaryId));
     }
 
+    public SummaryLikeResponse likeSummary(String providerUid, Long summaryId, String action) {
+        log.debug("요약본 action={} 시작: summaryId={}", action, summaryId);
+        memberService.findByProviderUid(providerUid);
+        publishLikeEvent(summaryId, action);
+        Summary summary = findByIdWithoutStats(summaryId);
+        int updatedCount = summary.getLikeCount();
+        log.debug("요약본 action={} 완료: summaryId={}", action, summaryId);
+        return SummaryLikeResponse.from(action, updatedCount);
+    }
 
     private void validateS3Key(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
@@ -281,16 +295,16 @@ public class SummaryService {
         visualContentService.connectToSummary(summary);
     }
 
-    private void validateAccess(Summary summary, Member requester) {
-        if (summary.isNotSameMemberId(requester.getId())) {
-            throw new AccessDeniedException();
-        }
-    }
-
     private Summary validateSummaryAccess(Long summaryId, Member requester) {
         Summary summary = findByIdWithoutStats(summaryId);
         validateAccess(summary, requester);
         return summary;
+    }
+
+    private void validateAccess(Summary summary, Member requester) {
+        if (summary.isNotSameMemberId(requester.getId())) {
+            throw new AccessDeniedException();
+        }
     }
 
     private String getMarkdownUrl(String s3Key) {
@@ -309,5 +323,15 @@ public class SummaryService {
                 .paper(paper)
                 .member(paper.getMember())
                 .build();
+    }
+
+    private void publishLikeEvent(Long summaryId, String action) {
+        if (action.equals("like")) {
+            statsEventPublisher.publish(summaryId, StatsType.LIKE);
+        } else if (action.equals("unlike")) {
+            statsEventPublisher.publish(summaryId, StatsType.UNLIKE);
+        } else {
+            throw new IllegalArgumentException("action은 like 또는 unlike만 가능합니다.");
+        }
     }
 }
