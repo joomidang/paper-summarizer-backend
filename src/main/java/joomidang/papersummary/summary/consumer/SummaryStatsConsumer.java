@@ -25,7 +25,7 @@ public class SummaryStatsConsumer {
         switch (type) {
             case "VIEW" -> summaryStatsService.increaseViewCount(summaryId);
             case "LIKE" -> summaryStatsService.increaseLikeCount(summaryId);
-            case "UNLIKE" -> summaryStatsService.decreaseLikeCount(summaryId);
+            case "DISLIKE" -> summaryStatsService.decreaseLikeCount(summaryId);
             case "COMMENT" -> summaryStatsService.increaseCommentCount(summaryId);
             case "UNCOMMENT" -> summaryStatsService.decreaseCommentCount(summaryId);
             default -> throw new IllegalArgumentException("Unsupported stats type: " + type);

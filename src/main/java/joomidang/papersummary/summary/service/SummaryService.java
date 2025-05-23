@@ -328,10 +328,10 @@ public class SummaryService {
     private void publishLikeEvent(Long summaryId, String action) {
         if (action.equals("like")) {
             statsEventPublisher.publish(summaryId, StatsType.LIKE);
-        } else if (action.equals("unlike")) {
-            statsEventPublisher.publish(summaryId, StatsType.UNLIKE);
+        } else if (action.equals("dislike")) {
+            statsEventPublisher.publish(summaryId, StatsType.DISLIKE);
         } else {
-            throw new IllegalArgumentException("action은 like 또는 unlike만 가능합니다.");
+            throw new IllegalArgumentException("action은 like 또는 dislike만 가능합니다.");
         }
     }
 }
