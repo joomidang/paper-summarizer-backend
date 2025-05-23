@@ -39,6 +39,7 @@ public class MemberController {
     private final JwtTokenProvider tokenProvider;
 
     /**
+     * 회원가입 이후 프로필 생성
      * @param request
      * @return
      */
@@ -73,7 +74,7 @@ public class MemberController {
             String authName = authentication.getName();
             log.info("토큰조회 userId={} name={}", userIdFromToken, authName);
             if (!authName.equals(userIdFromToken)) {
-                log.error("JWT 토큰의 사용자와 인증된 사용자가 일치하지 않습니다. JWT: {}, Auth: {}",
+                log.debug("JWT 토큰의 사용자와 인증된 사용자가 일치하지 않습니다. JWT: {}, Auth: {}",
                         userIdFromToken, authName);
                 throw new AccessDeniedException("인증 사용자와 토큰 사용자가 일치하지 않습니다");
             }
