@@ -48,7 +48,10 @@ public class TestUserConfig {
 
     public void init() {
         log.info("로컬 환경용 테스트 사용자 및 토큰 생성 시작");
-        createTestUser();
+        createTestUser("1111@example.com", "UserA");
+        createTestUser("2222@example.com", "UserB");
+        createTestUser("3333@example.com", "UserC");
+        createTestUser("4444@example.com", "UserD");
         createTestToken();
         log.info("로컬 환경용 테스트 사용자 및 토큰 생성 완료");
     }
@@ -56,9 +59,9 @@ public class TestUserConfig {
     /**
      * 테스트 사용자를 생성하거나 기존 사용자를 조회한다.
      */
-    private void createTestUser() {
+    private void createTestUser(String email, String name) {
         // 고정된 테스트 사용자 ID 사용
-        String testProviderUid = "test-user-local";
+        String testProviderUid = "test-user-local" + name;
 
         // 기존 테스트 사용자가 있는지 확인
         memberService.findByProviderAndProviderUid(AuthProvider.LOCAL, testProviderUid)
@@ -70,8 +73,8 @@ public class TestUserConfig {
                         () -> {
                             // 새 테스트 사용자 생성
                             Member newUser = Member.builder()
-                                    .email("test@example.com")
-                                    .name("Test User")
+                                    .email(email)
+                                    .name(name)
                                     .authProvider(AuthProvider.LOCAL)
                                     .providerUid(testProviderUid)
                                     .role(Role.USER)
