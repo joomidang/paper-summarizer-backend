@@ -14,7 +14,7 @@ public class StatsEventPublisher {
     private final RabbitTemplate rabbitTemplate;
 
     /**
-     * summaryId: 요약본 ID type: "VIEW" | "LIKE" | "UNLIKE" |"COMMENT" | "UNCOMMENT"
+     * summaryId: 요약본 ID type: "VIEW" | "LIKE" | "DISLIKE" |"COMMENT" | "UNCOMMENT"
      */
     public void publish(Long summaryId, StatsType type) {
         Map<String, Object> eventMessage = Map.of("summaryId", summaryId, "type", type.toString());
