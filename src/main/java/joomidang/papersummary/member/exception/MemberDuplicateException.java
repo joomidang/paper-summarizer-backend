@@ -4,11 +4,12 @@ import joomidang.papersummary.member.controller.response.MemberErrorCode;
 import lombok.Getter;
 
 @Getter
-public class MemberNotFoundException extends RuntimeException {
+public class MemberDuplicateException extends RuntimeException {
     private final MemberErrorCode errorCode;
 
-    public MemberNotFoundException(String message) {
+    public MemberDuplicateException(String message) {
+
         super(message);
-        this.errorCode = MemberErrorCode.MEMBER_NOT_FOUND;
+        this.errorCode = MemberErrorCode.DUPLICATE_USERNAME;
     }
 }

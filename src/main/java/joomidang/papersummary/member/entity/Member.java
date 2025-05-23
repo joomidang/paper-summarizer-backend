@@ -8,8 +8,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import joomidang.papersummary.common.audit.entity.BaseTimeEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -66,20 +69,28 @@ public class Member extends BaseTimeEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @OneToMany(mappedBy = "member", orphanRemoval = true)
+    @Builder.Default
+    private List<MemberInterest> interests = new ArrayList<>();
+
 
     public void updateLastLoginAt() {
         this.lastLoginAt = LocalDateTime.now();
     }
 
-    public void updateProfile(String username, String email, String profileImage) {
+    public void updateProfile(String username, String profileImage) {
         this.name = username;
-        this.email = email;
         this.profileImage = profileImage;
     }
 
     public void delete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void createProfile(String username, String profileImage) {
+        this.name = username;
+        this.profileImage = profileImage;
     }
 
     public boolean isNotSame(Long requesterId) {

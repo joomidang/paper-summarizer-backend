@@ -27,4 +27,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
      * @return
      */
     Optional<Member> findByProviderUid(String providerUid);
+
+    boolean existsByName(String name);
+    boolean existsByNameAndId(String name, Long id);
+    Optional<Member> findByName(String name);
+
 }
