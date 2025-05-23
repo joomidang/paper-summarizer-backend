@@ -16,22 +16,27 @@ public class SummaryStatsService {
     private final SummaryRepository summaryRepository;
 
     public void increaseViewCount(Long summaryId) {
-        summaryStatsRepository.increaseViewCount(summaryId);
+        int result = summaryStatsRepository.increaseViewCount(summaryId);
+        log.debug("조회수 증가 summaryId={}, result={}", summaryId, result);
     }
 
     public void increaseLikeCount(Long summaryId) {
-        summaryStatsRepository.increaseLikeCount(summaryId);
+        int result = summaryStatsRepository.increaseLikeCount(summaryId);
+        log.debug("좋아요 수 증가 summaryId={}, result={}", summaryId, result);
     }
 
     public void decreaseLikeCount(Long summaryId) {
-        summaryStatsRepository.decreaseLikeCount(summaryId);
+        int result = summaryStatsRepository.decreaseLikeCount(summaryId);
+        log.debug("좋아요 수 감소 summaryId={}, result={}", summaryId, result);
     }
 
     public void increaseCommentCount(Long summaryId) {
-        summaryStatsRepository.increaseCommentCount(summaryId);
+        int result = summaryStatsRepository.increaseCommentCount(summaryId);
+        log.debug("댓글 수 증가 summaryId={}, result={}", summaryId, result);
     }
 
     public void decreaseCommentCount(Long summaryId) {
-        summaryStatsRepository.decreaseCommentCount(summaryId);
+        int result = summaryStatsRepository.decreaseCommentCount(summaryId);
+        log.debug("댓글 수 감소 summaryId={}, result={}", summaryId, result);
     }
 }
