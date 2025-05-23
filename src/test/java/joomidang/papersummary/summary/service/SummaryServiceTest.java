@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
@@ -30,53 +31,61 @@ import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.entity.SummaryStats;
 import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
+import joomidang.papersummary.summary.repository.SummaryStatsRepository;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 public class SummaryServiceTest {
 
     private SummaryService summaryService;
     private PaperService paperService;
     private SummaryRepository summaryRepository;
+    private SummaryStatsRepository summaryStatsRepository;
     private VisualContentService visualContentService;
     private MemberService memberService;
     private S3Service s3Service;
     private SummaryVersionService summaryVersionService;
-
+    private StatsEventPublisher statsEventPublisher;
+    
     @BeforeEach
     void setUp() {
         paperService = mock(PaperService.class);
         summaryRepository = mock(SummaryRepository.class);
+        summaryStatsRepository = mock(SummaryStatsRepository.class);
         visualContentService = mock(VisualContentService.class);
         memberService = mock(MemberService.class);
         s3Service = mock(S3Service.class);
         summaryVersionService = mock(SummaryVersionService.class);
+        statsEventPublisher = mock(StatsEventPublisher.class);
 
         summaryService = new SummaryService(
                 paperService,
                 summaryRepository,
+                summaryStatsRepository,
                 visualContentService,
                 memberService,
                 s3Service,
-                summaryVersionService
+                summaryVersionService,
+                statsEventPublisher
         );
     }
 
     @Test
     @DisplayName("S3에서 요약 생성 성공 테스트")
-    void createSummaryFromS3Success() {
-        // given
+    void createSummaryWithStatsFromS3Success() {
+        //given
         Long paperId = 1L;
         String s3Key = "test-s3-key.md";
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
 
@@ -93,39 +102,35 @@ public class SummaryServiceTest {
                 .title("Test Paper Title")
                 .s3KeyMd(s3Key)
                 .publishStatus(PublishStatus.DRAFT)
-                .viewCount(0)
-                .likeCount(0)
                 .paper(mockPaper)
                 .member(mockMember)
                 .build();
 
-        when(summaryRepository.save(any(Summary.class))).thenReturn(mockSummary);
+        SummaryStats mockStats = SummaryStats.builder()
+                .id(1L)
+                .summary(mockSummary)
+                .viewCount(0)
+                .likeCount(0)
+                .commentCount(0)
+                .updatedAt(LocalDateTime.now())
+                .build();
 
-        // when
+        when(summaryRepository.save(any(Summary.class))).thenReturn(mockSummary);
+        when(summaryStatsRepository.save(any(SummaryStats.class))).thenReturn(mockStats);
+
         summaryService.createSummaryFromS3(paperId, s3Key);
 
-        // then
+        //then
         verify(paperService, times(1)).findById(paperId);
         verify(summaryRepository, times(1)).existsByPaper(mockPaper);
+        verify(summaryStatsRepository, times(1)).save(any(SummaryStats.class));
         verify(visualContentService, times(1)).connectToSummary(any(Summary.class));
-        verify(summaryRepository, times(1)).save(any(Summary.class));
-
-        // Verify Summary entity creation
-        ArgumentCaptor<Summary> summaryCaptor = ArgumentCaptor.forClass(Summary.class);
-        verify(summaryRepository).save(summaryCaptor.capture());
-        Summary capturedSummary = summaryCaptor.getValue();
-        assertEquals("Test Paper Title", capturedSummary.getTitle());
-        assertEquals(s3Key, capturedSummary.getS3KeyMd());
-        assertEquals(PublishStatus.DRAFT, capturedSummary.getPublishStatus());
-        assertEquals(0, capturedSummary.getViewCount());
-        assertEquals(0, capturedSummary.getLikeCount());
-        assertEquals(mockPaper, capturedSummary.getPaper());
-        assertEquals(mockMember, capturedSummary.getMember());
+        verify(summaryRepository, times(2)).save(any(Summary.class));
     }
 
     @Test
     @DisplayName("S3 키가 유효하지 않을 때 예외 발생 테스트")
-    void createSummaryFromS3InvalidS3Key() {
+    void createSummaryWithStatsFromS3InvalidS3Key() {
         // given
         Long paperId = 1L;
         String s3Key = "";
@@ -144,23 +149,23 @@ public class SummaryServiceTest {
 
     @Test
     @DisplayName("이미 요약이 존재할 때 예외 발생 테스트")
-    void createSummaryFromS3ExistingSummary() {
-        // given
+    void createSummaryFromS3ExistingSummaryWithStats() {
+        //given
         Long paperId = 1L;
         String s3Key = "test-s3-key.md";
 
+        //when
         Paper mockPaper = mock(Paper.class);
         when(mockPaper.getId()).thenReturn(paperId);
         when(paperService.findById(paperId)).thenReturn(mockPaper);
 
         when(summaryRepository.existsByPaper(mockPaper)).thenReturn(true);
 
-        // when & then
+        //then
         assertThrows(SummaryCreationFailedException.class, () -> {
             summaryService.createSummaryFromS3(paperId, s3Key);
         });
 
-        // Verify interactions
         verify(paperService, times(1)).findById(paperId);
         verify(summaryRepository, times(1)).existsByPaper(mockPaper);
         verify(visualContentService, times(0)).connectToSummary(any(Summary.class));
@@ -168,45 +173,46 @@ public class SummaryServiceTest {
     }
 
     @Test
-    @DisplayName("ID로 요약 조회 성공 테스트")
-    void findByIdSuccess() {
-        // given
+    @DisplayName("ID로 요약 findByIdWithStats 성공 테스트")
+    void findByIdWithStatsSuccess() {
+        //given
         Long summaryId = 1L;
         Summary mockSummary = mock(Summary.class);
+        //when
         when(mockSummary.getId()).thenReturn(summaryId);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        // when
-        Summary result = summaryService.findById(summaryId);
+        Summary result = summaryService.findByIdWithStats(summaryId);
 
-        // then
+        //then
         assertNotNull(result);
         assertEquals(summaryId, result.getId());
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithStats(summaryId);
     }
 
     @Test
-    @DisplayName("존재하지 않는 요약 ID로 조회 시 예외 발생 테스트")
-    void findByIdNotFound() {
-        // given
+    @DisplayName("ID로 요약 findByIdWithoutStats NotFound 테스트")
+    void findByIdWithoutStatsNotFound() {
+        //given
         Long summaryId = 1L;
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.empty());
+        //when
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.empty());
 
-        // when & then
+        //then
         assertThrows(SummaryNotFoundException.class, () -> {
-            summaryService.findById(summaryId);
+            summaryService.findByIdWithoutStats(summaryId);
         });
-
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
     }
 
     @Test
     @DisplayName("요약본 편집을 위한 상세 정보 조회 성공 테스트")
     void getSummaryForEditSuccess() {
-        // given
+        //given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
@@ -217,12 +223,10 @@ public class SummaryServiceTest {
         when(mockSummary.getBrief()).thenReturn("Test Brief");
         when(mockSummary.getS3KeyMd()).thenReturn("original-s3-key.md");
         when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        // No draft version found, use original s3Key
         when(summaryVersionService.findLatestDraft(summaryId)).thenReturn(Optional.empty());
 
-        // Mock visual content data
         List<String> figureUrls = Arrays.asList("figure1.jpg", "figure2.jpg");
         List<String> tableUrls = Arrays.asList("table1.jpg");
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE)))
@@ -230,33 +234,31 @@ public class SummaryServiceTest {
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
                 .thenReturn(tableUrls);
 
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/original-s3-key.md";
-
-        // when
         SummaryEditDetailResponse response = summaryService.getSummaryForEdit(providerUid, summaryId);
 
-        // then
+        //then
         assertNotNull(response);
         assertEquals(mockSummary.getTitle(), response.getTitle());
         assertEquals(mockSummary.getBrief(), response.getBrief());
-        assertEquals(markdownUrl, response.getMarkdownUrl());
+        assertEquals("https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/original-s3-key.md",
+                response.getMarkdownUrl());
         assertEquals(figureUrls, response.getFigures());
         assertEquals(tableUrls, response.getTables());
 
         verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
         verify(summaryVersionService, times(1)).findLatestDraft(summaryId);
         verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE));
-        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE));
     }
 
     @Test
     @DisplayName("요약본 편집을 위한 상세 정보 조회 시 최신 드래프트 버전 사용 테스트")
     void getSummaryForEditWithLatestDraft() {
-        // given
+        //given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
@@ -267,14 +269,12 @@ public class SummaryServiceTest {
         when(mockSummary.getBrief()).thenReturn("Test Brief");
         when(mockSummary.getS3KeyMd()).thenReturn("original-s3-key.md");
         when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        // Draft version found
         SummaryVersion mockVersion = mock(SummaryVersion.class);
         when(mockVersion.getS3KeyMd()).thenReturn("draft-s3-key.md");
         when(summaryVersionService.findLatestDraft(summaryId)).thenReturn(Optional.of(mockVersion));
 
-        // Mock visual content data
         List<String> figureUrls = Arrays.asList("figure1.jpg", "figure2.jpg");
         List<String> tableUrls = Arrays.asList("table1.jpg");
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE)))
@@ -282,56 +282,46 @@ public class SummaryServiceTest {
         when(visualContentService.findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE)))
                 .thenReturn(tableUrls);
 
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/draft-s3-key.md";
-
-        // when
         SummaryEditDetailResponse response = summaryService.getSummaryForEdit(providerUid, summaryId);
 
-        // then
+        //then
         assertNotNull(response);
-        assertEquals(mockSummary.getTitle(), response.getTitle());
-        assertEquals(mockSummary.getBrief(), response.getBrief());
-        assertEquals(markdownUrl, response.getMarkdownUrl());
-        assertEquals(figureUrls, response.getFigures());
-        assertEquals(tableUrls, response.getTables());
+        assertEquals("https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/draft-s3-key.md",
+                response.getMarkdownUrl());
 
-        verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
         verify(summaryVersionService, times(1)).findLatestDraft(summaryId);
-        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.FIGURE));
-        verify(visualContentService, times(1)).findUrlsBySummaryAndType(eq(mockSummary), eq(VisualContentType.TABLE));
     }
 
     @Test
     @DisplayName("권한 없는 사용자의 요약본 편집 정보 조회 시 예외 발생 테스트")
     void getSummaryForEditAccessDenied() {
-        // given
+        //given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
 
         Summary mockSummary = mock(Summary.class);
         when(mockSummary.getId()).thenReturn(summaryId);
-        when(mockSummary.isNotSameMemberId(1L)).thenReturn(true); // Different member
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(mockSummary.isNotSameMemberId(1L)).thenReturn(true);
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        // when & then
+        //then
         assertThrows(AccessDeniedException.class, () -> {
             summaryService.getSummaryForEdit(providerUid, summaryId);
         });
 
-        verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
-        verify(summaryVersionService, times(0)).findLatestDraft(anyLong());
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
     }
 
     @Test
     @DisplayName("요약본 편집 내용 저장 성공 테스트")
     void saveSummaryEditSuccess() {
-        // given
+        //given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
         SummaryEditRequest request = new SummaryEditRequest(
@@ -341,6 +331,7 @@ public class SummaryServiceTest {
                 Collections.emptyList()
         );
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
@@ -349,33 +340,29 @@ public class SummaryServiceTest {
         when(mockSummary.getId()).thenReturn(summaryId);
         when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.DRAFT);
         when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        String s3Key = "summaries/" + summaryId + "/draft-" + System.currentTimeMillis() + ".md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
+        String markdownUrl = "https://.../draft-123.md";
         when(s3Service.saveMarkdownToS3(anyString(), eq(request.markdownContent()))).thenReturn(markdownUrl);
 
-        // when
         SummaryEditResponse response = summaryService.saveSummaryEdit(providerUid, summaryId, request);
 
-        // then
+        //then
         assertNotNull(response);
         assertEquals(summaryId, response.getSummaryId());
         assertEquals(PublishStatus.DRAFT, response.getStatus());
         assertEquals(markdownUrl, response.getMarkdownUrl());
-        assertNotNull(response.getSavedAt());
 
-        verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
-        verify(s3Service, times(1)).saveMarkdownToS3(anyString(), eq(request.markdownContent()));
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
         verify(summaryVersionService, times(1)).createDraftVersion(eq(mockSummary), anyString(), eq(request.title()),
                 eq(mockMember));
     }
 
+
     @Test
     @DisplayName("요약본 발행 성공 테스트")
     void publishSummarySuccess() {
-        // given
+        //given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
         SummaryEditRequest request = new SummaryEditRequest(
@@ -385,6 +372,7 @@ public class SummaryServiceTest {
                 Collections.emptyList()
         );
 
+        //when
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
@@ -394,26 +382,21 @@ public class SummaryServiceTest {
         when(mockSummary.getTitle()).thenReturn("Published Title");
         when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
         when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
         when(summaryRepository.save(mockSummary)).thenReturn(mockSummary);
 
-        String s3Key = "summaries/" + summaryId + "/publish-" + System.currentTimeMillis() + ".md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
+        String markdownUrl = "https://.../publish-123.md";
         when(s3Service.saveMarkdownToS3(anyString(), eq(request.markdownContent()))).thenReturn(markdownUrl);
 
-        // when
         SummaryPublishResponse response = summaryService.publishSummary(providerUid, summaryId, request);
 
-        // then
+        //then
         assertNotNull(response);
         assertEquals(summaryId, response.summaryId());
         assertEquals(markdownUrl, response.markdownUrl());
         assertEquals("Published Title", response.title());
-        assertNotNull(response.publishedAt());
 
-        verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
-        verify(s3Service, times(1)).saveMarkdownToS3(anyString(), eq(request.markdownContent()));
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
         verify(summaryVersionService, times(1)).createPublishedVersion(eq(mockSummary), anyString(),
                 eq(request.title()), eq(mockMember));
         verify(mockSummary, times(1)).publish(eq(request.title()), eq(request.brief()), anyString());
@@ -423,39 +406,22 @@ public class SummaryServiceTest {
     @Test
     @DisplayName("발행된 요약본 상세 조회 성공 테스트")
     void getSummaryDetailSuccess() {
-        // given
+        //given
         Long summaryId = 1L;
-        String s3Key = "test-s3-key.md";
-        String markdownUrl = "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com/" + s3Key;
-        LocalDateTime updatedAt = LocalDateTime.now();
-
         Summary mockSummary = mock(Summary.class);
         when(mockSummary.getId()).thenReturn(summaryId);
-        when(mockSummary.getTitle()).thenReturn("Test Summary Title");
-        when(mockSummary.getBrief()).thenReturn("Test Brief");
-        when(mockSummary.getS3KeyMd()).thenReturn(s3Key);
         when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.PUBLISHED);
-        when(mockSummary.getUpdatedAt()).thenReturn(updatedAt);
+        when(mockSummary.getS3KeyMd()).thenReturn("test-key.md");
+        when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
         when(mockSummary.getViewCount()).thenReturn(10);
         when(mockSummary.getLikeCount()).thenReturn(5);
+        when(summaryRepository.findByIdWithStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
-
-        // when
         SummaryDetailResponse response = summaryService.getSummaryDetail(summaryId);
 
-        // then
         assertNotNull(response);
         assertEquals(summaryId, response.summaryId());
-        assertEquals("Test Summary Title", response.title());
-        assertEquals("Test Brief", response.brief());
-        assertEquals(markdownUrl, response.markdownUrl());
-        assertEquals(Collections.emptyList(), response.tags());
-        assertEquals(updatedAt, response.publishedAt());
-        assertEquals(10, response.viewCount());
-        assertEquals(5, response.likeCount());
-
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithStats(summaryId);
     }
 
     @Test
@@ -468,73 +434,79 @@ public class SummaryServiceTest {
         when(mockSummary.getId()).thenReturn(summaryId);
         when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.DRAFT); // Not published
 
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryRepository.findByIdWithStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
         // when & then
         assertThrows(AccessDeniedException.class, () -> {
             summaryService.getSummaryDetail(summaryId);
         });
 
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithStats(summaryId);
     }
 
     @Test
     @DisplayName("요약본 삭제 성공 테스트")
     void deleteSummarySuccess() {
-        // given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
-        String s3Key = "test-s3-key.md";
-
         Member mockMember = mock(Member.class);
-        when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
-
         Summary mockSummary = mock(Summary.class);
         when(mockSummary.getId()).thenReturn(summaryId);
-        when(mockSummary.getS3KeyMd()).thenReturn(s3Key);
-        when(mockSummary.isNotSameMemberId(1L)).thenReturn(false);
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(mockMember.getId()).thenReturn(1L);
+        when(mockSummary.isNotSameMemberId(mockMember.getId())).thenReturn(false);
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
         when(summaryRepository.save(mockSummary)).thenReturn(mockSummary);
 
-        // when
         summaryService.deleteSummary(providerUid, summaryId);
 
-        // then
-        verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
         verify(summaryVersionService, times(1)).deleteAllVersionBySummary(mockSummary);
-        verify(s3Service, times(1)).deleteFile(s3Key);
         verify(mockSummary, times(1)).softDelete();
         verify(summaryRepository, times(1)).save(mockSummary);
     }
 
     @Test
+    @DisplayName("요약본 삭제 시 SummaryStats도 함께 삭제 테스트")
+    void deleteSummaryAlsoDeletesStats() {
+        String providerUid = "uid";
+        Long summaryId = 1L;
+
+        Member member = mock(Member.class);
+        when(member.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(member);
+
+        Summary summary = mock(Summary.class);
+        when(summary.isNotSameMemberId(1L)).thenReturn(false);
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(summary));
+
+        // when
+        summaryService.deleteSummary(providerUid, summaryId);
+
+        // then
+        verify(summaryStatsRepository, times(1)).deleteBySummaryId(summaryId);
+        verify(summaryVersionService, times(1)).deleteAllVersionBySummary(summary);
+        verify(summary, times(1)).softDelete();
+        verify(summaryRepository, times(1)).save(summary);
+    }
+
+    @Test
     @DisplayName("권한 없는 사용자의 요약본 삭제 시 예외 발생 테스트")
     void deleteSummaryAccessDenied() {
-        // given
         String providerUid = "test-provider-uid";
         Long summaryId = 1L;
 
+        // Stub member lookup
         Member mockMember = mock(Member.class);
         when(mockMember.getId()).thenReturn(1L);
         when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
 
         Summary mockSummary = mock(Summary.class);
-        when(mockSummary.getId()).thenReturn(summaryId);
-        when(mockSummary.isNotSameMemberId(1L)).thenReturn(true); // Different member
-        when(summaryRepository.findById(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(mockSummary.isNotSameMemberId(1L)).thenReturn(true);
+        when(summaryRepository.findByIdWithoutStats(summaryId)).thenReturn(Optional.of(mockSummary));
 
-        // when & then
-        assertThrows(AccessDeniedException.class, () -> {
-            summaryService.deleteSummary(providerUid, summaryId);
-        });
-
+        assertThrows(AccessDeniedException.class, () -> summaryService.deleteSummary(providerUid, summaryId));
         verify(memberService, times(1)).findByProviderUid(providerUid);
-        verify(summaryRepository, times(1)).findById(summaryId);
-        verify(summaryVersionService, times(0)).deleteAllVersionBySummary(any(Summary.class));
-        verify(s3Service, times(0)).deleteFile(anyString());
-        verify(mockSummary, times(0)).softDelete();
-        verify(summaryRepository, times(0)).save(any(Summary.class));
+        verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
     }
 }

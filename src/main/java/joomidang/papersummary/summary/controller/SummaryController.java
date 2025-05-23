@@ -14,6 +14,7 @@ import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
+import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
 import joomidang.papersummary.summary.service.SummaryService;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -168,7 +170,8 @@ public class SummaryController {
                                             value = "{\n" +
                                                     "  \"title\": \"딥러닝을 활용한 자연어처리 기법 연구\",\n" +
                                                     "  \"brief\": \"본 논문은 최신 딥러닝 기술을 활용한 자연어처리 방법을 제안합니다.\",\n" +
-                                                    "  \"markdownContent\": \"# 딥러닝을 활용한 자연어처리 기법 연구\\n\\n## 초록\\n본 논문은 최신 딥러닝 기술을 활용한 자연어처리 방법을 제안합니다.\\n\\n## 1. 서론\\n최근 자연어 처리 분야에서는 딥러닝 모델이 큰 성과를 보이고 있습니다...\",\n" +
+                                                    "  \"markdownContent\": \"# 딥러닝을 활용한 자연어처리 기법 연구\\n\\n## 초록\\n본 논문은 최신 딥러닝 기술을 활용한 자연어처리 방법을 제안합니다.\\n\\n## 1. 서론\\n최근 자연어 처리 분야에서는 딥러닝 모델이 큰 성과를 보이고 있습니다...\",\n"
+                                                    +
                                                     "  \"tags\": [\"딥러닝\", \"자연어처리\", \"NLP\"]\n" +
                                                     "}"
                                     )
@@ -180,5 +183,15 @@ public class SummaryController {
 
         SummaryPublishResponse response = summaryService.publishSummary(providerUid, summaryId, request);
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_PUBLISH, response));
+    }
+
+    @PostMapping("/{summaryId}/like")
+    public ResponseEntity<ApiResponse<SummaryLikeResponse>> likeSummary(
+            @Authenticated String providerUid,
+            @PathVariable Long summaryId,
+            @RequestParam("action") String action
+    ) {
+        SummaryLikeResponse response = summaryService.likeSummary(providerUid, summaryId, action);
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_LIKE, response));
     }
 }
