@@ -48,7 +48,7 @@ class MemberServiceTest {
     void setUp() {
         // 테스트용 회원 정보 생성
         testMember = Member.builder()
-                .id(1L)
+//                .id(1L)
                 .email("test@example.com")
                 .name("TestUser")
                 .profileImage("https://example.com/image.jpg")
@@ -59,7 +59,7 @@ class MemberServiceTest {
 
         // 유효한 프로필 생성 요청
         validRequest = ProfileCreateRequest.builder()
-                .id(1L)
+//                .id(1L)
                 .username("NewUsername")
                 .profileImageUrl("https://example.com/new.jpg")
                 .interests(Arrays.asList("AI", "Machine Learning"))

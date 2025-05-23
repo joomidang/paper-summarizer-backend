@@ -80,7 +80,7 @@ class MemberControllerTest {
 
         // 유효한 프로필 생성 요청
         validRequest = ProfileCreateRequest.builder()
-                .id(4L)
+//                .id(4L)
                 .username("newUsername")
                 .profileImageUrl("https://example.com/image.jpg")
                 .interests(Arrays.asList("AI", "Machine Learning"))
@@ -115,7 +115,7 @@ class MemberControllerTest {
     void createProfileInvalidUserNameTest() throws Exception {
         // Given
         ProfileCreateRequest invalidRequest = ProfileCreateRequest.builder()
-                .id(1L)
+//                .id(1L)
                 .username("")
                 .profileImageUrl("https://example.com/image.jpg")
                 .interests(Arrays.asList("AI", "ML"))
@@ -134,7 +134,7 @@ class MemberControllerTest {
     void createProfileInvalidInterestsTest() throws Exception {
         // Given
         ProfileCreateRequest invalidRequest = ProfileCreateRequest.builder()
-                .id(1L)
+//                .id(1L)
                 .username("TestUser")
                 .profileImageUrl("https://example.com/image.jpg")
                 .interests(Collections.emptyList())  // 빈 리스트는 @NotEmpty 조건에 위배됨

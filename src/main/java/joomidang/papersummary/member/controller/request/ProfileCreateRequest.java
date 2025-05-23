@@ -14,9 +14,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProfileCreateRequest {
-    
-    private Long id;
-    
+
+
     @NotBlank(message = "사용자 이름은 필수입니다.")
     @Size(max = 60, message = "사용자 이름은 60자 이하여야 합니다.")
     private String username;
