@@ -1,5 +1,10 @@
 package joomidang.papersummary.comment.service;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import joomidang.papersummary.comment.controller.response.CommentListResponse;
 import joomidang.papersummary.comment.controller.response.CommentResponse;
 import joomidang.papersummary.comment.entity.Comment;
 import joomidang.papersummary.comment.exception.CommentAccessDeniedException;
@@ -13,6 +18,8 @@ import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.service.SummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -101,6 +108,56 @@ public class CommentService {
 
         comment.softDelete();
         log.info("댓글 삭제 완료: commentId={}", commentId);
+    }
+
+    /**
+     * 특정 요약본의 댓글 목록을 페이징으로 조회 부모 댓글을 페이징으로 조회한 후, 해당 부모들의 자식 댓글들을 일괄 조회하여 N+1 문제 해결
+     */
+    public CommentListResponse getCommentsBySummaryWithPaging(Long summaryId, Pageable pageable) {
+        log.debug("요약본 댓글 조회 시작: summaryId={}, page={}, size={}", summaryId, pageable.getPageNumber(),
+                pageable.getPageSize());
+        summaryService.findByIdWithoutStats(summaryId);
+
+        // 1단계: 최상위 댓글들만 페이징 조회
+        Page<Comment> rootCommentsPage = commentRepository.findRootCommentsBySummaryIdWithPaging(summaryId, pageable);
+
+        // 2단계: 조회된 부모 댓글들의 ID 수집
+        List<Long> parentIds = rootCommentsPage.getContent().stream()
+                .map(Comment::getId)
+                .collect(Collectors.toList());
+
+        // 3단계: 부모 댓글들의 자식 댓글들을 일괄 조회
+        if (!parentIds.isEmpty()) {
+            List<Comment> children = commentRepository.findChildrenByParentIds(parentIds);
+
+            // 4단계: 부모 댓글에 자식 댓글들 매핑
+            Map<Long, List<Comment>> childrenMap = children.stream()
+                    .collect(Collectors.groupingBy(child -> child.getParent().getId()));
+
+            // 5단계: 각 부모 댓글에 해당하는 자식 댓글들 설정
+            rootCommentsPage.getContent().forEach(parent -> {
+                List<Comment> parentChildren = childrenMap.getOrDefault(parent.getId(), Collections.emptyList());
+                parent.setChildrenList(parentChildren);
+            });
+        }
+
+        log.info("요약본 댓글 페이징 조회 완료: summaryId={}, 조회된 댓글 수={}, 전체 페이지={}",
+                summaryId, rootCommentsPage.getNumberOfElements(), rootCommentsPage.getTotalPages());
+
+        return CommentListResponse.from(rootCommentsPage);
+    }
+
+    /**
+     * 댓글 단건 조회
+     */
+    public Comment getCommentById(Long commentId) {
+        log.info("댓글 단건 조회: commentId={}", commentId);
+
+        Comment comment = findCommentById(commentId);
+        
+        validateCommentNotDeleted(comment);
+
+        return comment;
     }
 
     /**
