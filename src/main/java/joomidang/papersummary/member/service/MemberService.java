@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
@@ -176,4 +174,18 @@ public class MemberService {
         checkUsernameDuplicate(username, memberId);
     }
 
+    /**
+     * 지정된 회원의 관심분야 목록을 조회
+     *
+     * @param memberId 관심분야를 조회할 회원의 고유 식별자
+     * @return 회원의 관심분야를 나타내는 문자열 배열
+     */
+    @Transactional
+    public String[] getInterests(final Long memberId) {
+        log.debug("회원 관심사 조회 시작: memberId={}", memberId);
+        List<MemberInterest> memberInterests = memberInterestRepository.findByMemberId(memberId);
+        return memberInterests.stream()
+                .map(MemberInterest::getInterest)
+                .toArray(String[]::new);
+    }
 }

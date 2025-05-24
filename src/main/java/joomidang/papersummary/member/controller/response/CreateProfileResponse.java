@@ -13,19 +13,19 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProfileResponse {
+public class CreateProfileResponse {
     
     private Long id;
     private String username;
     private String profileImageUrl;
     private List<String> interests;
     
-    public static ProfileResponse from(Member member) {
+    public static CreateProfileResponse from(Member member) {
         List<String> interestList = member.getInterests().stream()
                 .map(MemberInterest::getInterest)
                 .collect(Collectors.toList());
         
-        return ProfileResponse.builder()
+        return CreateProfileResponse.builder()
                 .id(member.getId())
                 .username(member.getName())
                 .profileImageUrl(member.getProfileImage())
