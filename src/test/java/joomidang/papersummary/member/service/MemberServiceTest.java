@@ -48,7 +48,7 @@ class MemberServiceTest {
     void setUp() {
         // 테스트용 회원 정보 생성
         testMember = Member.builder()
-                .id(1L)
+//                .id(1L)
                 .email("test@example.com")
                 .name("TestUser")
                 .profileImage("https://example.com/image.jpg")
@@ -59,7 +59,7 @@ class MemberServiceTest {
 
         // 유효한 프로필 생성 요청
         validRequest = ProfileCreateRequest.builder()
-                .id(1L)
+//                .id(1L)
                 .username("NewUsername")
                 .profileImageUrl("https://example.com/new.jpg")
                 .interests(Arrays.asList("AI", "Machine Learning"))
@@ -148,5 +148,28 @@ class MemberServiceTest {
         // Then
         verify(memberInterestRepository, times(1)).deleteByMember(testMember);
         verify(memberInterestRepository, times(1)).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("사용자 관심사 조회 - 성공")
+    void getInterests_Success() {
+        // given
+        Long memberId = 1L;
+
+
+        List<MemberInterest> memberInterests = Arrays.asList(
+                MemberInterest.of(testMember, "AI"),
+                MemberInterest.of(testMember, "Machine Learning"),
+                MemberInterest.of(testMember, "Data Science")
+        );
+
+        given(memberInterestRepository.findByMemberId(memberId)).willReturn(memberInterests);
+
+        // when
+        String[] result = memberService.getInterests(memberId);
+
+        // then
+        assertThat(result).hasSize(3);
+        assertThat(result).containsExactly("AI", "Machine Learning", "Data Science");
     }
 }
