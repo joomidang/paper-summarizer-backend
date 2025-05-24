@@ -16,6 +16,7 @@ import joomidang.papersummary.member.controller.response.MemberInterestResponse;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.controller.response.CreateProfileResponse;
+import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
@@ -24,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @Slf4j
 @Tag(name = "Users", description = "사용자 관련 API")
@@ -132,5 +131,34 @@ public class MemberController {
         Long memberId = memberService.findByProviderUid(providerUid).getId();
         MemberSummaryResponse summaries = memberService.getSummaries(memberId, page, size);
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_SUMMARIES, summaries));
+    }
+
+    /**
+     * 사용자 프로필 수정
+     * 
+     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @return 수정된 프로필 정보가 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 프로필 수정", description = "인증된 사용자의 프로필 정보(닉네임, 관심분야, 프로필 이미지)를 수정합니다. 모든 필드는 선택적입니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "프로필 수정 성공", responseCode = "200")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "인증 실패", responseCode = "403")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "잘못된 입력형태", responseCode = "400")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "닉네임 중복", responseCode = "409")
+    @PatchMapping("/me/profile")
+    public ResponseEntity<ApiResponse<CreateProfileResponse>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @Parameter(hidden = true)
+            @Authenticated String providerUid
+    ) {
+        log.info("프로필 수정 요청: providerUid={}, request={}", providerUid, request);
+
+        // 프로필 수정
+        Member updatedMember = memberService.updateProfile(providerUid, request);
+
+        // 응답 생성
+        CreateProfileResponse response = CreateProfileResponse.from(updatedMember);
+
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_UPDATED, response));
     }
 }

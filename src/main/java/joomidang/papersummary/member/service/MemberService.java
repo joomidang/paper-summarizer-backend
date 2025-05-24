@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
+import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
@@ -228,5 +229,54 @@ public class MemberService {
 
         // 응답 객체 생성
         return MemberSummaryResponse.from(summaryPage);
+    }
+
+    /**
+     * 회원 프로필 정보 수정
+     *
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @return 수정된 회원 객체
+     * @throws MemberNotFoundException 회원이 없을 때 발생
+     */
+    @Transactional
+    public Member updateProfile(final String providerUid, final UpdateProfileRequest request) {
+        log.info("프로필 수정 시작: providerUid={}", providerUid);
+
+        // 회원 조회
+        Member member = findByProviderUid(providerUid);
+        log.info("사용자 조회 성공: memberId={}, 현재 name={}", member.getId(), member.getName());
+
+        // 닉네임이 제공된 경우에만 업데이트 및 중복 검증
+        if (request.getUsername() != null) {
+            checkUsernameDuplicate(request.getUsername(), member.getId());
+            log.info("닉네임 중복 검사 통과: username={}", request.getUsername());
+        }
+
+        // 프로필 정보 업데이트 (제공된 필드만)
+        String newUsername = request.getUsername() != null ? request.getUsername() : member.getName();
+        String newProfileImageUrl = request.getProfileImageUrl() != null ? request.getProfileImageUrl() : member.getProfileImage();
+        member.updateProfile(newUsername, newProfileImageUrl);
+        log.info("프로필 정보 업데이트: username={}, profileImageUrl={}", newUsername, newProfileImageUrl);
+
+        // 관심분야가 제공된 경우에만 업데이트
+        if (request.getInterests() != null) {
+            // 기존 관심분야 삭제
+            memberInterestRepository.deleteByMember(member);
+            log.info("기존 관심분야 삭제 완료");
+
+            // 새로운 관심분야 추가
+            List<MemberInterest> interests = request.getInterests().stream()
+                    .map(interest -> MemberInterest.of(member, interest))
+                    .collect(Collectors.toList());
+
+            memberInterestRepository.saveAll(interests);
+            log.info("새 관심분야 저장 완료: count={}", interests.size());
+        }
+
+        Member savedMember = memberRepository.save(member);
+        log.info("프로필 수정 완료: memberId={}, name={}", savedMember.getId(), savedMember.getName());
+
+        return savedMember;
     }
 }
