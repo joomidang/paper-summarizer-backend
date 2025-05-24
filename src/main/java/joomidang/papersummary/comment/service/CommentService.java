@@ -88,6 +88,22 @@ public class CommentService {
     }
 
     /**
+     * 댓글 삭제
+     */
+    @Transactional
+    public void deleteComment(String providerUid, Long commentId) {
+        log.debug("댓글 삭제 시작: commentId={}, providerUid={}", commentId, providerUid);
+        Comment comment = findCommentById(commentId);
+
+        validateCommentNotDeleted(comment);
+
+        validateCommentOwnership(comment, providerUid);
+
+        comment.softDelete();
+        log.info("댓글 삭제 완료: commentId={}", commentId);
+    }
+
+    /**
      * 댓글 ID로 댓글 조회 (내부 사용)
      */
     private Comment findCommentById(Long commentId) {
