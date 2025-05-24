@@ -279,8 +279,8 @@ public class SummaryService {
                 .commentCount(0)
                 .updatedAt(LocalDateTime.now())
                 .build();
+        savedSummary.setSummaryStats(summaryStats);
         summaryStatsRepository.save(summaryStats);
-        savedSummary.initializeSummaryStats();
         return savedSummary;
     }
 

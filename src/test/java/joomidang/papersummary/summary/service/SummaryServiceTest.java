@@ -54,7 +54,7 @@ public class SummaryServiceTest {
     private S3Service s3Service;
     private SummaryVersionService summaryVersionService;
     private StatsEventPublisher statsEventPublisher;
-    
+
     @BeforeEach
     void setUp() {
         paperService = mock(PaperService.class);
