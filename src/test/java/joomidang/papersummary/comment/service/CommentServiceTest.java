@@ -15,12 +15,19 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import joomidang.papersummary.comment.controller.response.CommentLikeResponse;
 import joomidang.papersummary.comment.controller.response.CommentListResponse;
 import joomidang.papersummary.comment.controller.response.CommentResponse;
 import joomidang.papersummary.comment.entity.Comment;
+import joomidang.papersummary.comment.entity.CommentLike;
 import joomidang.papersummary.comment.exception.CommentAccessDeniedException;
 import joomidang.papersummary.comment.exception.CommentNotFoundException;
+import joomidang.papersummary.comment.exception.DeletedCommentException;
+import joomidang.papersummary.comment.exception.InvalidLikeActionException;
 import joomidang.papersummary.comment.exception.InvalidParentCommentException;
+import joomidang.papersummary.comment.exception.UnpublishedSummaryCommentException;
+import joomidang.papersummary.comment.repository.CommentLikeRepository;
 import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
@@ -43,6 +50,7 @@ class CommentServiceTest {
     private CommentRepository commentRepository;
     private SummaryService summaryService;
     private MemberService memberService;
+    private CommentLikeRepository commentLikeRepository;
 
     private Member testMember;
     private Member anotherMember;
@@ -57,8 +65,12 @@ class CommentServiceTest {
         commentRepository = mock(CommentRepository.class);
         summaryService = mock(SummaryService.class);
         memberService = mock(MemberService.class);
+        commentRepository = mock(CommentRepository.class);
+        summaryService = mock(SummaryService.class);
+        memberService = mock(MemberService.class);
+        commentLikeRepository = mock(CommentLikeRepository.class);
 
-        commentService = new CommentService(commentRepository, summaryService, memberService);
+        commentService = new CommentService(commentRepository, summaryService, memberService, commentLikeRepository);
 
         // 테스트용 Member 생성
         testMember = Member.builder()
@@ -201,7 +213,7 @@ class CommentServiceTest {
         when(summaryService.findByIdWithoutStats(summaryId)).thenReturn(draftSummary);
 
         // when & then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(UnpublishedSummaryCommentException.class, () -> {
             commentService.createReply(providerUid, summaryId, parentCommentId, content);
         });
 
@@ -314,7 +326,7 @@ class CommentServiceTest {
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(deletedComment));
 
         // when & then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(DeletedCommentException.class, () -> {
             commentService.updateComment(providerUid, commentId, newContent);
         });
 
@@ -384,7 +396,7 @@ class CommentServiceTest {
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(deletedComment));
 
         // when & then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(DeletedCommentException.class, () -> {
             commentService.deleteComment(providerUid, commentId);
         });
 
@@ -529,7 +541,7 @@ class CommentServiceTest {
         when(commentRepository.findById(commentId)).thenReturn(Optional.of(deletedComment));
 
         // when & then
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(DeletedCommentException.class, () -> {
             commentService.getCommentById(commentId);
         });
 
@@ -581,5 +593,274 @@ class CommentServiceTest {
         assertNotNull(result);
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(commentRepository, times(1)).findByMemberAndDeletedFalseWithSummary(testMember, pageable);
+    }
+
+    // =================== likeComment 테스트 ===================
+
+    @Test
+    @DisplayName("댓글 좋아요 추가 성공 테스트")
+    void likeCommentSuccess() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "like";
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.empty()); // 기존 좋아요 없음
+        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(mock(CommentLike.class));
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(true, result.liked());
+        assertEquals(1, result.likeCount()); // increaseLikeCount 호출로 1이 됨
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, times(1)).findByMemberAndComment(testMember, parentComment);
+        verify(commentLikeRepository, times(1)).save(any(CommentLike.class));
+        verify(commentLikeRepository, never()).delete(any(CommentLike.class));
+
+        // CommentLike 엔티티 생성 검증
+        ArgumentCaptor<CommentLike> commentLikeCaptor = ArgumentCaptor.forClass(CommentLike.class);
+        verify(commentLikeRepository).save(commentLikeCaptor.capture());
+        CommentLike capturedCommentLike = commentLikeCaptor.getValue();
+        assertEquals(testMember, capturedCommentLike.getMember());
+        assertEquals(parentComment, capturedCommentLike.getComment());
+    }
+
+    @Test
+    @DisplayName("댓글 좋아요 제거 성공 테스트")
+    void dislikeCommentSuccess() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "dislike";
+
+        CommentLike existingLike = CommentLike.of(testMember, parentComment);
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.of(existingLike)); // 기존 좋아요 있음
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(false, result.liked());
+        assertEquals(-1, result.likeCount()); // decreaseLikeCount 호출로 -1이 됨
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, times(1)).findByMemberAndComment(testMember, parentComment);
+        verify(commentLikeRepository, times(1)).delete(existingLike);
+        verify(commentLikeRepository, never()).save(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("이미 좋아요된 댓글에 다시 좋아요 요청 시 중복 처리")
+    void likeCommentAlreadyLiked() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "like";
+
+        CommentLike existingLike = CommentLike.of(testMember, parentComment);
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.of(existingLike)); // 이미 좋아요 있음
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(true, result.liked());
+        assertEquals(0, result.likeCount()); // 좋아요 수 변경 없음
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, times(1)).findByMemberAndComment(testMember, parentComment);
+        verify(commentLikeRepository, never()).save(any(CommentLike.class));
+        verify(commentLikeRepository, never()).delete(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("좋아요되지 않은 댓글에 dislike 요청 시 중복 처리")
+    void dislikeCommentNotLiked() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "dislike";
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.empty()); // 좋아요 없음
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(false, result.liked());
+        assertEquals(0, result.likeCount()); // 좋아요 수 변경 없음
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, times(1)).findByMemberAndComment(testMember, parentComment);
+        verify(commentLikeRepository, never()).save(any(CommentLike.class));
+        verify(commentLikeRepository, never()).delete(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("잘못된 action 값으로 댓글 좋아요 요청 시 예외 발생")
+    void likeCommentInvalidAction() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "invalid_action";
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+
+        // when & then
+        assertThrows(InvalidLikeActionException.class, () -> {
+            CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+            future.get();
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, never()).findByMemberAndComment(any(), any());
+        verify(commentLikeRepository, never()).save(any(CommentLike.class));
+        verify(commentLikeRepository, never()).delete(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("null action 값으로 댓글 좋아요 요청 시 예외 발생")
+    void likeCommentNullAction() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = null;
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+
+        // when & then
+        assertThrows(InvalidLikeActionException.class, () -> {
+            CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+            future.get();
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, never()).findByMemberAndComment(any(), any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 댓글에 좋아요 요청 시 예외 발생")
+    void likeCommentNotFound() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 999L;
+        String action = "like";
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThrows(CommentNotFoundException.class, () -> {
+            CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+            future.get();
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, never()).findByMemberAndComment(any(), any());
+    }
+
+    @Test
+    @DisplayName("삭제된 댓글에 좋아요 요청 시 예외 발생")
+    void likeDeletedComment() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 3L;
+        String action = "like";
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(deletedComment));
+
+        // when & then
+        assertThrows(DeletedCommentException.class, () -> {
+            CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+            future.get();
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(commentRepository, times(1)).findById(commentId);
+        verify(commentLikeRepository, never()).findByMemberAndComment(any(), any());
+    }
+
+    @Test
+    @DisplayName("대소문자 구분 없이 action 처리 테스트 - LIKE")
+    void likeCommentCaseInsensitiveLike() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "LIKE"; // 대문자
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.empty());
+        when(commentLikeRepository.save(any(CommentLike.class))).thenReturn(mock(CommentLike.class));
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(true, result.liked());
+        verify(commentLikeRepository, times(1)).save(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("대소문자 구분 없이 action 처리 테스트 - DISLIKE")
+    void likeCommentCaseInsensitiveDislike() throws Exception {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+        String action = "DISLIKE"; // 대문자
+
+        CommentLike existingLike = CommentLike.of(testMember, parentComment);
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(testMember);
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parentComment));
+        when(commentLikeRepository.findByMemberAndComment(testMember, parentComment))
+                .thenReturn(Optional.of(existingLike));
+
+        // when
+        CompletableFuture<CommentLikeResponse> future = commentService.likeComment(providerUid, commentId, action);
+        CommentLikeResponse result = future.get();
+
+        // then
+        assertNotNull(result);
+        assertEquals(false, result.liked());
+        verify(commentLikeRepository, times(1)).delete(existingLike);
     }
 }
