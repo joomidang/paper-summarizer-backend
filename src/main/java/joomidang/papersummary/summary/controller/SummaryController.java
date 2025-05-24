@@ -2,6 +2,7 @@ package joomidang.papersummary.summary.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -95,6 +96,7 @@ public class SummaryController {
      */
     @DeleteMapping("/{summaryId}")
     public ResponseEntity<ApiResponse<Void>> deleteSummary(
+            @Parameter(hidden = true)
             @Authenticated String providerUid,
             @PathVariable Long summaryId) {
         log.debug("요약본 삭제 요청 : summaryId={}, providerUid={}", summaryId, providerUid);
@@ -185,8 +187,24 @@ public class SummaryController {
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_PUBLISH, response));
     }
 
+    @Operation(
+            summary = "요약본 좋아요/좋아요 취소",
+            description = "요약본에 좋아요를 추가하거나 제거합니다.",
+            parameters = {
+                    @Parameter(name = "summaryId", description = "요약본 ID", required = true, in = ParameterIn.PATH, example = "1"),
+                    @Parameter(name = "action", description = "like 또는 unlike", required = true, in = ParameterIn.QUERY, example = "like")
+            },
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공적으로 처리됨",
+                            content = @Content(schema = @Schema(implementation = SummaryLikeResponse.class))),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "요약본을 찾을 수 없음"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류")
+            }
+    )
     @PostMapping("/{summaryId}/like")
     public ResponseEntity<ApiResponse<SummaryLikeResponse>> likeSummary(
+            @Parameter(hidden = true)
             @Authenticated String providerUid,
             @PathVariable Long summaryId,
             @RequestParam("action") String action
