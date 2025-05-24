@@ -17,6 +17,7 @@ import joomidang.papersummary.comment.service.CommentService;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -83,7 +84,7 @@ public class CommentController {
     @GetMapping("/summaries/{summaryId}/comments")
     public ResponseEntity<ApiResponse<CommentListResponse>> getCommentsBySummary(
             @Parameter(description = "요약본 ID") @PathVariable Long summaryId,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.ASC) Pageable pageable) {
 
         log.info("댓글 목록 조회 요청: summaryId={}, page={}, size={}",
                 summaryId, pageable.getPageNumber(), pageable.getPageSize());
