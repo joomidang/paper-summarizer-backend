@@ -67,15 +67,18 @@ public class Summary extends BaseTimeEntity {
 
     // SummaryStats 초기화 메서드 추가
     public void initializeSummaryStats() {
-        if (this.summaryStats == null) {
-            this.summaryStats = SummaryStats.builder()
-                    .summary(this)
-                    .viewCount(0)
-                    .likeCount(0)
-                    .commentCount(0)
-                    .updatedAt(LocalDateTime.now())
-                    .build();
+        if (this.summaryStats != null) {
+            return;
         }
+
+        SummaryStats stats = SummaryStats.builder()
+                .summary(this)
+                .viewCount(0)
+                .likeCount(0)
+                .commentCount(0)
+                .updatedAt(LocalDateTime.now())
+                .build();
+        this.summaryStats = stats;
     }
 
     public Long getSummaryId() {
@@ -114,5 +117,9 @@ public class Summary extends BaseTimeEntity {
         this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
         this.publishStatus = PublishStatus.DELETED;
+    }
+
+    public void setSummaryStats(SummaryStats summaryStats) {
+        this.summaryStats = summaryStats;
     }
 }
