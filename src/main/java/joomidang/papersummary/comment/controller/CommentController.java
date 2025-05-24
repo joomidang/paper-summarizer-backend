@@ -2,13 +2,20 @@ package joomidang.papersummary.comment.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.comment.controller.request.CommentCreateRequest;
 import joomidang.papersummary.comment.controller.request.CommentUpdateRequest;
 import joomidang.papersummary.comment.controller.request.ReplyCreateRequest;
+import joomidang.papersummary.comment.controller.response.CommentLikeResponse;
 import joomidang.papersummary.comment.controller.response.CommentListResponse;
 import joomidang.papersummary.comment.controller.response.CommentResponse;
 import joomidang.papersummary.comment.controller.response.CommentSuccessCode;
@@ -29,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -141,5 +149,49 @@ public class CommentController {
         commentService.deleteComment(providerUid, commentId);
 
         return ResponseEntity.ok(ApiResponse.success(CommentSuccessCode.COMMENT_DELETED));
+    }
+
+    /**
+     * 댓글 좋아요/취소
+     */
+    @Operation(
+            summary = "댓글 좋아요/좋아요 취소",
+            description = "댓글에 좋아요를 추가하거나 제거합니다.",
+            parameters = {
+                    @Parameter(name = "commentId", description = "댓글 ID", required = true, in = ParameterIn.PATH, example = "1"),
+                    @Parameter(name = "action", description = "like 또는 dislike", required = true, in = ParameterIn.QUERY, example = "like")
+            }
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공적으로 처리됨"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "서버 오류")
+    })
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<ApiResponse<CommentLikeResponse>> likeComment(
+            @Parameter(description = "댓글 ID") @PathVariable Long commentId,
+            @Parameter(description = "좋아요 액션") @RequestParam("action") String action,
+            @Parameter(hidden = true) @Authenticated String providerUid)
+            throws ExecutionException, InterruptedException {
+
+        log.info("댓글 좋아요 {} 요청: commentId={}, providerUid={}", action, commentId, providerUid);
+
+        try {
+            CompletableFuture<CommentLikeResponse> futureResponse =
+                    commentService.likeComment(providerUid, commentId, action);
+
+            CommentLikeResponse response = futureResponse.get(5, TimeUnit.SECONDS);
+
+            return ResponseEntity.ok(ApiResponse.successWithData(CommentSuccessCode.COMMENT_LIKED, response));
+
+        } catch (TimeoutException e) {
+            log.error("댓글 좋아요 처리 타임아웃: commentId={}, action={}", commentId, action);
+            throw new RuntimeException("좋아요 처리 중 타임아웃이 발생했습니다.");
+        } catch (Exception e) {
+            log.error("댓글 좋아요 처리 실패: commentId={}, action={}, error={}",
+                    commentId, action, e.getMessage(), e);
+            throw e;
+        }
     }
 }

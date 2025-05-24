@@ -11,7 +11,9 @@ public enum CommentErrorCode implements ErrorCode {
     COMMENT_ACCESS_DENIED("COM-E002"),
     INVALID_COMMENT_CONTENT("COM-E003"),
     DELETED_COMMENT_ACCESS("COM-E004"),
-    INVALID_PARENT_COMMENT("COM-E005");
+    INVALID_PARENT_COMMENT("COM-E005"),
+    UNPUBLISHED_SUMMARY_COMMENT("COM-E006"),  // 새로 추가
+    INVALID_LIKE_ACTION("COM-E007");          // 새로 추가
 
     private final String value;
 }

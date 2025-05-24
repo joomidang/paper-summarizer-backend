@@ -3,13 +3,21 @@ package joomidang.papersummary.comment.service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import joomidang.papersummary.comment.controller.response.CommentLikeResponse;
 import joomidang.papersummary.comment.controller.response.CommentListResponse;
 import joomidang.papersummary.comment.controller.response.CommentResponse;
 import joomidang.papersummary.comment.entity.Comment;
+import joomidang.papersummary.comment.entity.CommentLike;
 import joomidang.papersummary.comment.exception.CommentAccessDeniedException;
 import joomidang.papersummary.comment.exception.CommentNotFoundException;
+import joomidang.papersummary.comment.exception.DeletedCommentException;
+import joomidang.papersummary.comment.exception.InvalidLikeActionException;
 import joomidang.papersummary.comment.exception.InvalidParentCommentException;
+import joomidang.papersummary.comment.exception.UnpublishedSummaryCommentException;
+import joomidang.papersummary.comment.repository.CommentLikeRepository;
 import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
@@ -20,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +40,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final SummaryService summaryService;
     private final MemberService memberService;
+    private final CommentLikeRepository commentLikeRepository;
 
     /**
      * 댓글 작성
@@ -180,6 +190,26 @@ public class CommentService {
     }
 
     /**
+     * 댓글 좋아요/취소(비동기)
+     */
+    @Async
+    @Transactional
+    public CompletableFuture<CommentLikeResponse> likeComment(String providerUid, Long commentId, String action) {
+        log.debug("댓글 좋아요 {} 처리 시작: commentId={}, providerUid={}", action, commentId, providerUid);
+        Member member = memberService.findByProviderUid(providerUid);
+
+        Comment comment = findCommentById(commentId);
+
+        validateCommentNotDeleted(comment);
+        validateAction(action);
+
+        CommentLikeResponse response = processLike(member, comment, action);
+        log.debug("댓글 좋아요 {} 처리 완료: commentId={}, liked={}, providerUid={}", action, commentId, response.liked(),
+                providerUid);
+        return CompletableFuture.completedFuture(response);
+    }
+
+    /**
      * 댓글 ID로 댓글 조회 (내부 사용)
      */
     private Comment findCommentById(Long commentId) {
@@ -200,7 +230,7 @@ public class CommentService {
         if (summary.getPublishStatus() != PublishStatus.PUBLISHED) {
             log.error("발행되지 않은 요약본에 댓글 작성 시도: summaryId={}, status={}",
                     summaryId, summary.getPublishStatus());
-            throw new IllegalArgumentException("발행되지 않은 요약본에는 댓글을 작성할 수 없습니다.");
+            throw new UnpublishedSummaryCommentException();
         }
 
         return summary;
@@ -223,7 +253,7 @@ public class CommentService {
     private void validateCommentNotDeleted(Comment comment) {
         if (comment.isDeleted()) {
             log.error("삭제된 댓글에 대한 작업 시도: commentId={}", comment.getId());
-            throw new IllegalArgumentException("삭제된 댓글입니다.");
+            throw new DeletedCommentException();
         }
     }
 
@@ -238,4 +268,42 @@ public class CommentService {
         }
     }
 
+    private void validateAction(String action) {
+        if (action == null ||
+                (!action.equalsIgnoreCase("like") && !action.equalsIgnoreCase("dislike"))) {
+            throw new InvalidLikeActionException(action);
+        }
+    }
+
+    private CommentLikeResponse processLike(Member member, Comment comment, String action) {
+        Optional<CommentLike> existingLike = commentLikeRepository.findByMemberAndComment(member, comment);
+
+        if (existingLike.isPresent() && "dislike".equalsIgnoreCase(action)) {
+            // 좋아요 제거
+            commentLikeRepository.delete(existingLike.get());
+            comment.decreaseLikeCount();
+            log.debug("댓글 좋아요 제거: commentId={}, memberId={}, newLikeCount={}",
+                    comment.getId(), member.getId(), comment.getLikeCount());
+
+        } else if (existingLike.isEmpty() && "like".equalsIgnoreCase(action)) {
+            // 좋아요 추가
+            CommentLike commentLike = CommentLike.of(member, comment);
+            commentLikeRepository.save(commentLike);
+            comment.increaseLikeCount();
+            log.debug("댓글 좋아요 추가: commentId={}, memberId={}, newLikeCount={}",
+                    comment.getId(), member.getId(), comment.getLikeCount());
+
+        } else {
+            // 중복 요청 처리
+            if (existingLike.isPresent() && "like".equalsIgnoreCase(action)) {
+                log.debug("이미 좋아요가 되어있는 댓글: commentId={}, memberId={}",
+                        comment.getId(), member.getId());
+            } else if (existingLike.isEmpty() && "dislike".equalsIgnoreCase(action)) {
+                log.debug("좋아요가 되어있지 않은 댓글에 dislike 요청: commentId={}, memberId={}",
+                        comment.getId(), member.getId());
+            }
+        }
+
+        return CommentLikeResponse.from(action, comment.getLikeCount());
+    }
 }

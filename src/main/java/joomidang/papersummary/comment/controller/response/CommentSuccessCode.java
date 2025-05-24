@@ -12,7 +12,8 @@ public enum CommentSuccessCode implements SuccessCode {
     COMMENT_UPDATED("COM-0003", "댓글이 성공적으로 수정되었습니다."),
     COMMENT_DELETED("COM-0004", "댓글이 성공적으로 삭제되었습니다."),
     COMMENT_FETCHED("COM-0005", "댓글 정보를 성공적으로 조회했습니다."),
-    COMMENTS_FETCHED("COM-0006", "댓글 목록을 성공적으로 조회했습니다.");
+    COMMENTS_FETCHED("COM-0006", "댓글 목록을 성공적으로 조회했습니다."),
+    COMMENT_LIKED("COM-0007", "댓글에 성공적으로 좋아요/취소 처리되었습니다.");
 
     private final String value;
     private final String message;
