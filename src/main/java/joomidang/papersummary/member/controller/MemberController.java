@@ -14,6 +14,7 @@ import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.response.MemberInterestResponse;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
+import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.controller.response.CreateProfileResponse;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
@@ -108,9 +109,28 @@ public class MemberController {
         MemberInterestResponse response = MemberInterestResponse.from(interests);
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));
     }
-//    public ResponseEntity<ApiResponse<Void>> getMyProfile(
-//            @RequestBody HttpServletRequest request, Authentication authentication
-//    ){
-//        return
-//    }
+
+    /**
+     * 인증된 사용자가 작성한 요약 목록을 조회
+     *
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @param page 페이지 번호 (기본값: 1)
+     * @param size 페이지 크기 (기본값: 10)
+     * @return 페이지네이션된 요약 목록 데이터가 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 작성 요약 목록 조회", description = "인증된 사용자가 작성한 요약 목록을 페이지네이션으로 조회합니다.")
+    @GetMapping("/me/summaries")
+    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getSummaries(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
+    ){
+        log.debug("사용자 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        MemberSummaryResponse summaries = memberService.getSummaries(memberId, page, size);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_SUMMARIES, summaries));
+    }
 }

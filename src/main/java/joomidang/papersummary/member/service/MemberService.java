@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
+import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.MemberInterest;
@@ -12,8 +13,14 @@ import joomidang.papersummary.member.exception.MemberDuplicateException;
 import joomidang.papersummary.member.exception.MemberNotFoundException;
 import joomidang.papersummary.member.repository.MemberInterestRepository;
 import joomidang.papersummary.member.repository.MemberRepository;
+import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.repository.SummaryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +36,7 @@ public class MemberService {
     /** 회원 엔티티에 대한 JPA 리포지토리 */
     private final MemberRepository memberRepository;
     private final MemberInterestRepository memberInterestRepository;
+    private final SummaryRepository summaryRepository;
 
     /**
      * 회원 정보 저장
@@ -187,5 +195,38 @@ public class MemberService {
         return memberInterests.stream()
                 .map(MemberInterest::getInterest)
                 .toArray(String[]::new);
+    }
+
+    /**
+     * 회원이 작성한 요약 목록을 페이지네이션으로 조회
+     *
+     * @param memberId 요약을 조회할 회원의 고유 식별자
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 페이지네이션된 회원의 요약 목록
+     */
+    @Transactional
+    public MemberSummaryResponse getSummaries(final Long memberId, int page, int size) {
+        log.debug("회원 요약 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
+
+        if (page > 0) {
+            page = page - 1;
+        }
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 회원의 요약 목록 조회
+        Page<Summary> summaryPage = summaryRepository.findByMemberIdWithStats(memberId, pageable);
+
+        // 각 요약의 통계 정보 초기화 (Lazy Loading 방지)
+        summaryPage.getContent().forEach(summary -> {
+            if (summary.getSummaryStats() == null) {
+                summary.initializeSummaryStats();
+            }
+        });
+
+        // 응답 객체 생성
+        return MemberSummaryResponse.from(summaryPage);
     }
 }
