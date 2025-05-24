@@ -154,10 +154,29 @@ public class CommentService {
         log.info("댓글 단건 조회: commentId={}", commentId);
 
         Comment comment = findCommentById(commentId);
-        
+
         validateCommentNotDeleted(comment);
 
         return comment;
+    }
+
+    /**
+     * 특정 사용자가 작성한 댓글 목록을 페이징으로 조회
+     */
+    public CommentListResponse getCommentsByMember(String providerUid, Pageable pageable) {
+        log.debug("사용자 댓글 조회 시작: providerUid={}, page={}, size={}",
+                providerUid, pageable.getPageNumber(), pageable.getPageSize());
+
+        // 사용자 정보 조회
+        Member member = memberService.findByProviderUid(providerUid);
+
+        // 사용자가 작성한 삭제되지 않은 댓글들을 페이징 조회
+        Page<Comment> commentsPage = commentRepository.findByMemberAndDeletedFalseWithSummary(member, pageable);
+
+        log.info("사용자 댓글 조회 완료: providerUid={}, 조회된 댓글 수={}, 전체 페이지={}",
+                providerUid, commentsPage.getNumberOfElements(), commentsPage.getTotalPages());
+
+        return CommentListResponse.from(commentsPage);
     }
 
     /**
