@@ -55,7 +55,7 @@ aws:
 logging:
   config: classpath:logback/logback-local.xml
   level:
-    joomidang.papersummary: info #필요시 info, trace
+    joomidang.papersummary: trace #필요시 info, trace
     org.hibernate.sql: debug #SQL 쿼리 로깅
 
 springdoc:

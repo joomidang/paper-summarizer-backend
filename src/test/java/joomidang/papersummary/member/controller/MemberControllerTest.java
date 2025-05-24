@@ -3,10 +3,8 @@ package joomidang.papersummary.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import joomidang.papersummary.auth.security.JwtTokenProvider;
-import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
-import joomidang.papersummary.member.controller.response.ProfileResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.Role;
@@ -30,10 +28,9 @@ import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -168,4 +165,38 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.code").value("MEM-0003"))
                 .andExpect(jsonPath("$.message").value("이미 사용 중인 닉네임입니다."));
     }
+
+    @Test
+    @DisplayName("사용자 관심사 조회 API 성공 테스트")
+    void getInterestsSuccessTest() throws Exception {
+        // given
+        String providerUid = "test-user-local";
+        Member member = Member.builder()
+                .id(1L)
+                .email("test@example.com")
+                .name("testUser")
+                .authProvider(AuthProvider.LOCAL)
+                .providerUid(providerUid)
+                .role(Role.USER)
+                .build();
+
+        String[] interests = {"AI", "Machine Learning", "Data Science"};
+
+        when(memberService.findByProviderUid(providerUid)).thenReturn(member);
+        when(memberService.getInterests(1L)).thenReturn(interests);
+
+        // when & then
+        mockMvc.perform(get("/api/users/me/interests")
+                        .param("providerUid", providerUid)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("MEM-0002"))
+                .andExpect(jsonPath("$.message").value("유저 정보 조회"))
+                .andExpect(jsonPath("$.data.interests").isArray())
+                .andExpect(jsonPath("$.data.interests.length()").value(3))
+                .andExpect(jsonPath("$.data.interests[0]").value("AI"))
+                .andExpect(jsonPath("$.data.interests[1]").value("Machine Learning"))
+                .andExpect(jsonPath("$.data.interests[2]").value("Data Science"));
+    }
+
 }

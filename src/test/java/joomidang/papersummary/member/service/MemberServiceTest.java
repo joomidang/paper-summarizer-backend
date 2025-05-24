@@ -149,4 +149,27 @@ class MemberServiceTest {
         verify(memberInterestRepository, times(1)).deleteByMember(testMember);
         verify(memberInterestRepository, times(1)).saveAll(any());
     }
+
+    @Test
+    @DisplayName("사용자 관심사 조회 - 성공")
+    void getInterests_Success() {
+        // given
+        Long memberId = 1L;
+
+
+        List<MemberInterest> memberInterests = Arrays.asList(
+                MemberInterest.of(testMember, "AI"),
+                MemberInterest.of(testMember, "Machine Learning"),
+                MemberInterest.of(testMember, "Data Science")
+        );
+
+        given(memberInterestRepository.findByMemberId(memberId)).willReturn(memberInterests);
+
+        // when
+        String[] result = memberService.getInterests(memberId);
+
+        // then
+        assertThat(result).hasSize(3);
+        assertThat(result).containsExactly("AI", "Machine Learning", "Data Science");
+    }
 }

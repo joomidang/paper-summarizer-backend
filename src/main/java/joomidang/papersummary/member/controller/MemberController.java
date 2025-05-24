@@ -1,31 +1,30 @@
 package joomidang.papersummary.member.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import joomidang.papersummary.auth.controller.AuthController;
+import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.security.JwtTokenProvider;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
+import joomidang.papersummary.member.controller.response.MemberInterestResponse;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
-import joomidang.papersummary.member.controller.response.ProfileResponse;
+import joomidang.papersummary.member.controller.response.CreateProfileResponse;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @Slf4j
 @Tag(name = "Users", description = "사용자 관련 API")
@@ -62,10 +61,8 @@ public class MemberController {
     )
 
     @PutMapping("/me/profile")
-    public ResponseEntity<ApiResponse<ProfileResponse>> createProfile(
-            @Valid @RequestBody ProfileCreateRequest request,
-            Authentication authentication,
-            HttpServletRequest httpRequest) {
+    public ResponseEntity<ApiResponse<CreateProfileResponse>> createProfile(
+            @Valid @RequestBody ProfileCreateRequest request, Authentication authentication, HttpServletRequest httpRequest) {
 
         // 토큰에서 사용자 정보 확인
         String token = httpRequest.getHeader("Authorization");
@@ -89,8 +86,31 @@ public class MemberController {
         Member member = memberService.createProfile(memberId, request);
 
         // 응답 생성
-        ProfileResponse response = ProfileResponse.from(member);
+        CreateProfileResponse response = CreateProfileResponse.from(member);
 
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_CREATED, response));
     }
+
+    /**
+     * 인증된 사용자의 관심분야를 조회
+     *
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @return 관심분야 데이터가 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @GetMapping("/me/interests")
+    public ResponseEntity<ApiResponse<MemberInterestResponse>> getInterests(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid
+    ){
+        log.debug("provierUid={}", providerUid);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        String[] interests = memberService.getInterests(memberId);
+        MemberInterestResponse response = MemberInterestResponse.from(interests);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));
+    }
+//    public ResponseEntity<ApiResponse<Void>> getMyProfile(
+//            @RequestBody HttpServletRequest request, Authentication authentication
+//    ){
+//        return
+//    }
 }
