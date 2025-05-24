@@ -58,6 +58,10 @@ public class Comment extends BaseTimeEntity {
     @Builder.Default
     private Integer likeCount = 0;
 
+    public boolean isNotEqualsSummaryId(Long summaryId) {
+        return !summaryId.equals(summary.getId());
+    }
+
     public void softDelete() {
         this.isDeleted = true;
         this.updatedAt = LocalDateTime.now();
