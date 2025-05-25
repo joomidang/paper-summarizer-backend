@@ -216,6 +216,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<ProfileImageResponse>> uploadProfileImage(
             @Parameter(description = "파일 업로드", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
             @RequestParam("file") MultipartFile file,
+            @Parameter(hidden = true)
             @Authenticated String providerUid
     ) {
         log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(), file.getSize() / 1024);
