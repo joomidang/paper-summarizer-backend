@@ -187,11 +187,10 @@ public class SummaryController {
     }
 
     @Operation(
-            summary = "요약본 좋아요/좋아요 취소",
+            summary = "요약본 좋아요 토글",
             description = "요약본에 좋아요를 추가하거나 제거합니다.",
             parameters = {
                     @Parameter(name = "summaryId", description = "요약본 ID", required = true, in = ParameterIn.PATH, example = "1"),
-                    @Parameter(name = "action", description = "like 또는 unlike", required = true, in = ParameterIn.QUERY, example = "like")
             },
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공적으로 처리됨",
