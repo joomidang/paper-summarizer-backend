@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -206,10 +205,9 @@ public class SummaryController {
     public ResponseEntity<ApiResponse<SummaryLikeResponse>> likeSummary(
             @Parameter(hidden = true)
             @Authenticated String providerUid,
-            @PathVariable Long summaryId,
-            @RequestParam("action") String action
+            @PathVariable Long summaryId
     ) {
-        SummaryLikeResponse response = summaryService.likeSummary(providerUid, summaryId, action);
+        SummaryLikeResponse response = summaryService.toggleLikeSummary(providerUid, summaryId);
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_LIKE, response));
     }
 }

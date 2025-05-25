@@ -20,19 +20,16 @@ import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
-import joomidang.papersummary.summary.entity.SummaryLike;
 import joomidang.papersummary.summary.entity.SummaryStats;
 import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
-import joomidang.papersummary.summary.repository.SummaryLikeRepository;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import joomidang.papersummary.summary.repository.SummaryStatsRepository;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,11 +45,11 @@ public class SummaryService {
     private final PaperService paperService;
     private final SummaryRepository summaryRepository;
     private final SummaryStatsRepository summaryStatsRepository;
-    private final SummaryLikeRepository summaryLikeRepository;
     private final VisualContentService visualContentService;
     private final MemberService memberService;
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
+    private final SummaryLikeService summaryLikeService;
     private final StatsEventPublisher statsEventPublisher;
 
     @Transactional
@@ -248,24 +245,28 @@ public class SummaryService {
     /**
      * 요약본 좋아요
      */
-    public SummaryLikeResponse likeSummary(String providerUid, Long summaryId, String action) {
-        log.debug("요약본 action={} 시작: summaryId={}", action, summaryId);
-        memberService.findByProviderUid(providerUid);
-        publishLikeEvent(summaryId, action);
-        Summary summary = findByIdWithoutStats(summaryId);
-        int updatedCount = summary.getLikeCount();
-        log.debug("요약본 action={} 완료: summaryId={}", action, summaryId);
-        return SummaryLikeResponse.from(action, updatedCount);
+    public SummaryLikeResponse toggleLikeSummary(String providerUid, Long summaryId) {
+        log.debug("요약본 좋아요 토글 시작: summaryId={}", summaryId);
+
+        Summary summary = findByIdWithStats(summaryId);
+        validateSummaryForLike(summary);
+
+        int beforeCount = summary.getLikeCount();
+
+        boolean isLiked = summaryLikeService.toggleLike(providerUid, summary);
+
+        int updatedCount = isLiked ? beforeCount + 1 : beforeCount - 1;
+        updatedCount = Math.max(0, updatedCount);
+
+        log.debug("요약본 좋아요 토글 완료: summaryId={}, isLiked={}", summaryId, isLiked);
+        return new SummaryLikeResponse(isLiked, updatedCount);
     }
 
     /**
      * 좋아요한 요약본 조회
      */
     public LikedSummaryListResponse getLikedSummaries(String providerUid, Pageable pageable) {
-        Member member = memberService.findByProviderUid(providerUid);
-        Page<SummaryLike> summaryLikes = summaryLikeRepository.findByMemberIdWithSummary(member.getId(),
-                PublishStatus.PUBLISHED, pageable);
-        return LikedSummaryListResponse.from(summaryLikes);
+        return summaryLikeService.getLikedSummaries(providerUid, pageable);
     }
 
     private void validateS3Key(String s3Key) {
@@ -329,6 +330,16 @@ public class SummaryService {
     private void validateAccess(Summary summary, Member requester) {
         if (summary.isNotSameMemberId(requester.getId())) {
             throw new AccessDeniedException();
+        }
+    }
+
+    private void validateSummaryForLike(Summary summary) {
+        if (summary.getPublishStatus() != PublishStatus.PUBLISHED) {
+            throw new IllegalArgumentException("발행되지 않은 요약본에는 좋아요할 수 없습니다.");
+        }
+
+        if (summary.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 요약본에는 좋아요할 수 없습니다.");
         }
     }
 
