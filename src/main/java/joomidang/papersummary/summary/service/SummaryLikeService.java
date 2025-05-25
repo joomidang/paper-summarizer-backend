@@ -40,6 +40,7 @@ public class SummaryLikeService {
         if (existingLike.isPresent()) {
             // 이미 좋아요가 있으면 제거 (좋아요 취소)
             summaryLikeRepository.delete(existingLike.get());
+            summaryLikeRepository.flush();
             statsEventPublisher.publish(summary.getId(), StatsType.DISLIKE);
             log.debug("좋아요 취소 완료: summaryId={}, memberId={}", summary.getId(), member.getId());
             return false;

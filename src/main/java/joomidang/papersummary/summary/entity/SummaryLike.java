@@ -1,5 +1,6 @@
 package joomidang.papersummary.summary.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -9,7 +10,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import joomidang.papersummary.common.audit.entity.BaseTimeEntity;
+import java.time.LocalDateTime;
 import joomidang.papersummary.member.entity.Member;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,7 +28,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class SummaryLike extends BaseTimeEntity {
+public class SummaryLike {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -39,6 +40,10 @@ public class SummaryLike extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "summary_id", nullable = false)
     private Summary summary;
+
+    @Column(name = "created_at", nullable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     public static SummaryLike of(Member member, Summary summary) {
         return SummaryLike.builder()
