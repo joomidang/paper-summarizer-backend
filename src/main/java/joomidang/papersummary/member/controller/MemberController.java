@@ -17,15 +17,19 @@ import joomidang.papersummary.member.controller.response.MemberSuccessCode;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.controller.response.MemberCommentResponse;
 import joomidang.papersummary.member.controller.response.CreateProfileResponse;
+import joomidang.papersummary.member.controller.response.ProfileImageResponse;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
+import joomidang.papersummary.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Tag(name = "Users", description = "사용자 관련 API")
@@ -37,6 +41,7 @@ public class MemberController {
 
     private final MemberService memberService;
     private final JwtTokenProvider tokenProvider;
+    private final S3Service s3Service;
 
     /**
      * 회원가입 이후 프로필 생성
@@ -196,4 +201,38 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_COMMENTS, comments));
     }
 
+    /**
+     * 사용자 프로필 이미지 업로드
+     *
+     * @param file 업로드할 프로필 이미지 파일
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @return 업로드된 이미지 URL이 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 프로필 이미지 업로드", description = "사용자의 프로필 이미지를 업로드합니다. 이미지는 자동으로 리사이징되어 저장됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "이미지 업로드 성공", responseCode = "200")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "인증 실패", responseCode = "403")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "잘못된 파일 형식", responseCode = "400")
+    @PostMapping(value = "/me/profile/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProfileImageResponse>> uploadProfileImage(
+            @Parameter(description = "파일 업로드", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+            @RequestParam("file") MultipartFile file,
+            @Authenticated String providerUid
+    ) {
+        log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(), file.getSize() / 1024);
+
+        // 이미지 업로드 및 처리
+        String imageUrl = s3Service.uploadProfileImage(file);
+        log.info("프로필 이미지 업로드 완료: imageUrl={}", imageUrl);
+
+        // 사용자 프로필 이미지 URL 업데이트
+        UpdateProfileRequest updateRequest = UpdateProfileRequest.builder()
+                .profileImageUrl(imageUrl)
+                .build();
+        memberService.updateProfile(providerUid, updateRequest);
+        log.info("사용자 프로필 이미지 URL 업데이트 완료: providerUid={}", providerUid);
+
+        // 응답 생성
+        ProfileImageResponse response = ProfileImageResponse.from(imageUrl);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, response));
+    }
 }
