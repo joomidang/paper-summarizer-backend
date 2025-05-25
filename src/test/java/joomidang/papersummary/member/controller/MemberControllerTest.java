@@ -56,6 +56,9 @@ class MemberControllerTest {
     private Member testMember;
     private ProfileCreateRequest validRequest;
     private final String TEST_USER_ID = "test-user-local";
+    private final String TEST_TOKEN = "Bearer fake-token";
+    private final int PAGE = 0;
+    private final int SIZE = 10;
 
     @BeforeEach
     void setUp() {
@@ -199,4 +202,19 @@ class MemberControllerTest {
                 .andExpect(jsonPath("$.data.interests[2]").value("Data Science"));
     }
 
+    @Test
+    @DisplayName("사용자 댓글 목록 조회 API 성공 테스트")
+    void getCommentsSuccessTest() throws Exception {
+        when(authentication.getName()).thenReturn(TEST_USER_ID);
+        when(memberService.findByProviderUid(any())).thenReturn(testMember);
+
+        mockMvc.perform(get("/api/users/me/comments")
+                        .param("page", String.valueOf(PAGE))
+                        .param("size", String.valueOf(SIZE))
+                        .header("Authorization", TEST_TOKEN)
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_COMMENTS.getValue()))
+                .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_COMMENTS.getMessage()));
+    }
 }

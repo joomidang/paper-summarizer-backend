@@ -4,8 +4,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import joomidang.papersummary.comment.entity.Comment;
+import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
+import joomidang.papersummary.member.controller.response.MemberCommentResponse;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
@@ -38,6 +41,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final MemberInterestRepository memberInterestRepository;
     private final SummaryRepository summaryRepository;
+    private final CommentRepository commentRepository;
 
     /**
      * 회원 정보 저장
@@ -277,6 +281,27 @@ public class MemberService {
         // 응답 객체 생성
         return MemberSummaryResponse.from(summaryPage);
     }
+
+    @Transactional
+    public MemberCommentResponse getComments(final Long memberId, int page, int size){
+        log.debug("내 댓글 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
+
+        if (page > 0) page = page - 1;
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("회원을 찾을 수 없습니다: " + memberId));
+
+        // 회원의 댓글 목록 조회 (삭제되지 않은 댓글만)
+        Page<Comment> commentPage = commentRepository.findByMemberAndDeletedFalseWithSummary(member, pageable);
+
+        // 응답 객체 생성
+        return MemberCommentResponse.from(commentPage);
+    }
+
 
 //    @Transactional
 //    public MemberSummaryResponse getLikedSummaries(final Long memberId, int page, int size){

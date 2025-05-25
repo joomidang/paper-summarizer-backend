@@ -12,7 +12,8 @@ public enum MemberSuccessCode implements SuccessCode {
     MEMBER_SUMMARIES("MEM-0003", "사용자 작성 요약 목록 조회 성공"),
     PROFILE_UPDATED("MEM-0004", "프로필 수정 완료"),
     MEMBER_LIKED_SUMMARIES("MEM-0005", "좋아요한 요약 목록 조회 성공"),
-    PROFILE_IMAGE_UPLOADED("MEM-0006", "이미지 업로드 성공");
+    MEMBER_COMMENTS("MEM-0006", "사용자 댓글 목록 조회 성공"),
+    PROFILE_IMAGE_UPLOADED("MEM-0007", "이미지 업로드 성공");
 
 
     private final String value;

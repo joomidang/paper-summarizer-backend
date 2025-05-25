@@ -15,6 +15,7 @@ import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.response.MemberInterestResponse;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
+import joomidang.papersummary.member.controller.response.MemberCommentResponse;
 import joomidang.papersummary.member.controller.response.CreateProfileResponse;
 import joomidang.papersummary.member.controller.response.ProfileImageResponse;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
@@ -184,6 +185,22 @@ public class MemberController {
 //        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, summaries));
 //    }
 
+    @Operation(summary = "사용자 작성 댓글 목록 조회", description = "인증된 사용자가 작성한 댓글 목록을 페이지네이션으로 조회합니다.")
+    @GetMapping("/me/comments")
+    public ResponseEntity<ApiResponse<MemberCommentResponse>> getComments(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
+    ){
+        log.debug("사용자가 작성한 댓글 모두 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        MemberCommentResponse comments = memberService.getComments(memberId, page, size);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_COMMENTS, comments));
+    }
+
     /**
      * 사용자 프로필 이미지 업로드
      *
@@ -199,7 +216,6 @@ public class MemberController {
     public ResponseEntity<ApiResponse<ProfileImageResponse>> uploadProfileImage(
             @Parameter(description = "파일 업로드", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
             @RequestParam("file") MultipartFile file,
-            @Parameter(hidden = true)
             @Authenticated String providerUid
     ) {
         log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(), file.getSize() / 1024);
