@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import joomidang.papersummary.paper.exception.FileUploadFailedException;
+import joomidang.papersummary.paper.exception.InvalidFileTypeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -117,7 +118,7 @@ public class S3ServiceImpl implements S3Service {
 
         if (file.isEmpty()) {
             log.error("업로드 실패: 파일이 비어있습니다.");
-            throw new FileUploadFailedException("업로드할 파일이 비어있습니다.");
+            throw new InvalidFileTypeException("업로드할 파일이 비어있습니다.");
         }
 
         // 이미지 파일 확장자 확인
@@ -130,7 +131,7 @@ public class S3ServiceImpl implements S3Service {
         // 지원하는 이미지 형식인지 확인
         if (!isImageFile(fileExtension)) {
             log.error("업로드 실패: 지원하지 않는 파일 형식입니다. 확장자={}", fileExtension);
-            throw new FileUploadFailedException("지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG, GIF 파일만 업로드 가능합니다.");
+            throw new InvalidFileTypeException("지원하지 않는 이미지 형식입니다. JPG, JPEG, PNG, GIF 파일만 업로드 가능합니다.");
         }
 
         try {
