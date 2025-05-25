@@ -1,8 +1,10 @@
 package joomidang.papersummary.summary.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -13,28 +15,34 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.Member;
+import joomidang.papersummary.member.exception.MemberNotFoundException;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.entity.SummaryLike;
 import joomidang.papersummary.summary.entity.SummaryStats;
 import joomidang.papersummary.summary.entity.SummaryVersion;
 import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
+import joomidang.papersummary.summary.repository.SummaryLikeRepository;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import joomidang.papersummary.summary.repository.SummaryStatsRepository;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
@@ -42,6 +50,11 @@ import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 public class SummaryServiceTest {
 
@@ -49,6 +62,7 @@ public class SummaryServiceTest {
     private PaperService paperService;
     private SummaryRepository summaryRepository;
     private SummaryStatsRepository summaryStatsRepository;
+    private SummaryLikeRepository summaryLikeRepository;
     private VisualContentService visualContentService;
     private MemberService memberService;
     private S3Service s3Service;
@@ -60,6 +74,7 @@ public class SummaryServiceTest {
         paperService = mock(PaperService.class);
         summaryRepository = mock(SummaryRepository.class);
         summaryStatsRepository = mock(SummaryStatsRepository.class);
+        summaryLikeRepository = mock(SummaryLikeRepository.class);
         visualContentService = mock(VisualContentService.class);
         memberService = mock(MemberService.class);
         s3Service = mock(S3Service.class);
@@ -70,6 +85,7 @@ public class SummaryServiceTest {
                 paperService,
                 summaryRepository,
                 summaryStatsRepository,
+                summaryLikeRepository,
                 visualContentService,
                 memberService,
                 s3Service,
@@ -508,5 +524,189 @@ public class SummaryServiceTest {
         assertThrows(AccessDeniedException.class, () -> summaryService.deleteSummary(providerUid, summaryId));
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
+    }
+
+    @Test
+    @DisplayName("내가 좋아요한 요약본 목록 조회 성공 테스트")
+    void getLikedSummariesSuccess() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+
+        // Mock SummaryLike 객체들 생성
+        SummaryLike mockSummaryLike1 = createMockSummaryLike(1L, "첫 번째 요약본", mockMember);
+        SummaryLike mockSummaryLike2 = createMockSummaryLike(2L, "두 번째 요약본", mockMember);
+        List<SummaryLike> summaryLikes = Arrays.asList(mockSummaryLike1, mockSummaryLike2);
+
+        Page<SummaryLike> mockPage = new PageImpl<>(summaryLikes, pageable, 2);
+        when(summaryLikeRepository.findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                .thenReturn(mockPage);
+
+        // when
+        LikedSummaryListResponse response = summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(2, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(2L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 첫 번째 요약본 검증
+        LikedSummaryResponse firstSummary = response.summaries().get(0);
+        assertEquals(1L, firstSummary.summaryId());
+        assertEquals("첫 번째 요약본", firstSummary.title());
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(summaryLikeRepository, times(1)).findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("좋아요한 요약본이 없는 경우 빈 목록 반환 테스트")
+    void getLikedSummariesEmptyResult() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(0, 20);
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+
+        Page<SummaryLike> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(summaryLikeRepository.findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                .thenReturn(emptyPage);
+
+        // when
+        LikedSummaryListResponse response = summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(0, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(0, response.totalPages());
+        assertEquals(0L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(summaryLikeRepository, times(1)).findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자의 좋아요한 요약본 조회 시 예외 발생 테스트")
+    void getLikedSummariesMemberNotFound() {
+        // given
+        String providerUid = "non-existent-uid";
+        Pageable pageable = PageRequest.of(0, 20);
+
+        when(memberService.findByProviderUid(providerUid))
+                .thenThrow(new MemberNotFoundException("사용자를 찾을 수 없습니다."));
+
+        // when & then
+        assertThrows(MemberNotFoundException.class, () -> {
+            summaryService.getLikedSummaries(providerUid, pageable);
+        });
+
+        verify(memberService, times(1)).findByProviderUid(providerUid);
+        verify(summaryLikeRepository, times(0)).findByMemberIdWithSummary(
+                anyLong(), any(PublishStatus.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("페이징이 올바르게 동작하는지 테스트")
+    void getLikedSummariesPagingTest() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(1, 10, Sort.by("createdAt").descending()); // 두 번째 페이지
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+
+        // 총 25개 중 두 번째 페이지(10개)
+        List<SummaryLike> summaryLikes = createMockSummaryLikeList(10, mockMember);
+        Page<SummaryLike> mockPage = new PageImpl<>(summaryLikes, pageable, 25);
+
+        when(summaryLikeRepository.findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                .thenReturn(mockPage);
+
+        // when
+        LikedSummaryListResponse response = summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(10, response.summaries().size());
+        assertEquals(1, response.currentPage()); // 두 번째 페이지
+        assertEquals(3, response.totalPages()); // 총 3페이지 (25개 / 10개)
+        assertEquals(25L, response.totalElements());
+        assertTrue(response.hasNext()); // 다음 페이지 있음
+        assertTrue(response.hasPrevious()); // 이전 페이지 있음
+
+        verify(summaryLikeRepository, times(1)).findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable));
+    }
+
+    @Test
+    @DisplayName("발행된 요약본만 조회되는지 테스트")
+    void getLikedSummariesOnlyPublishedSummaries() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(0, 20);
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getId()).thenReturn(1L);
+        when(memberService.findByProviderUid(providerUid)).thenReturn(mockMember);
+        Page<SummaryLike> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+        when(summaryLikeRepository.findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                .thenReturn(emptyPage);
+        // when
+        summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then - PUBLISHED 상태만 조회하는지 확인
+        verify(summaryLikeRepository, times(1)).findByMemberIdWithSummary(
+                eq(1L), eq(PublishStatus.PUBLISHED), eq(pageable));
+    }
+
+    // Helper 메서드들
+    private SummaryLike createMockSummaryLike(Long summaryId, String title, Member member) {
+        SummaryLike mockSummaryLike = mock(SummaryLike.class);
+        Summary mockSummary = mock(Summary.class);
+        Member mockAuthor = mock(Member.class);
+
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getTitle()).thenReturn(title);
+        when(mockSummary.getBrief()).thenReturn(title + " 요약 내용");
+        when(mockSummary.getMember()).thenReturn(mockAuthor);
+        when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary.getViewCount()).thenReturn(10);
+        when(mockSummary.getLikeCount()).thenReturn(5);
+        when(mockSummary.getCommentCount()).thenReturn(3);
+
+        when(mockAuthor.getName()).thenReturn("작성자" + summaryId);
+
+        when(mockSummaryLike.getSummary()).thenReturn(mockSummary);
+        when(mockSummaryLike.getCreatedAt()).thenReturn(LocalDateTime.now());
+
+        return mockSummaryLike;
+    }
+
+    private List<SummaryLike> createMockSummaryLikeList(int count, Member member) {
+        List<SummaryLike> summaryLikes = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            summaryLikes.add(createMockSummaryLike((long) i, "요약본 " + i, member));
+        }
+        return summaryLikes;
     }
 }
