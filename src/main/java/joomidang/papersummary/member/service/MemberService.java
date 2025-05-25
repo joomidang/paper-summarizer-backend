@@ -4,7 +4,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import joomidang.papersummary.comment.entity.Comment;
+import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
+import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
+import joomidang.papersummary.member.controller.response.MemberCommentResponse;
+import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.MemberInterest;
@@ -12,8 +17,14 @@ import joomidang.papersummary.member.exception.MemberDuplicateException;
 import joomidang.papersummary.member.exception.MemberNotFoundException;
 import joomidang.papersummary.member.repository.MemberInterestRepository;
 import joomidang.papersummary.member.repository.MemberRepository;
+import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.repository.SummaryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +40,8 @@ public class MemberService {
     /** 회원 엔티티에 대한 JPA 리포지토리 */
     private final MemberRepository memberRepository;
     private final MemberInterestRepository memberInterestRepository;
+    private final SummaryRepository summaryRepository;
+    private final CommentRepository commentRepository;
 
     /**
      * 회원 정보 저장
@@ -175,6 +188,55 @@ public class MemberService {
     }
 
     /**
+     * 회원 프로필 정보 수정
+     *
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @return 수정된 회원 객체
+     * @throws MemberNotFoundException 회원이 없을 때 발생
+     */
+    @Transactional
+    public Member updateProfile(final String providerUid, final UpdateProfileRequest request) {
+        log.info("프로필 수정 시작: providerUid={}", providerUid);
+
+        // 회원 조회
+        Member member = findByProviderUid(providerUid);
+        log.info("사용자 조회 성공: memberId={}, 현재 name={}", member.getId(), member.getName());
+
+        // 닉네임이 제공된 경우에만 업데이트 및 중복 검증
+        if (request.getUsername() != null) {
+            checkUsernameDuplicate(request.getUsername(), member.getId());
+            log.info("닉네임 중복 검사 통과: username={}", request.getUsername());
+        }
+
+        // 프로필 정보 업데이트 (제공된 필드만)
+        String newUsername = request.getUsername() != null ? request.getUsername() : member.getName();
+        String newProfileImageUrl = request.getProfileImageUrl() != null ? request.getProfileImageUrl() : member.getProfileImage();
+        member.updateProfile(newUsername, newProfileImageUrl);
+        log.info("프로필 정보 업데이트: username={}, profileImageUrl={}", newUsername, newProfileImageUrl);
+
+        // 관심분야가 제공된 경우에만 업데이트
+        if (request.getInterests() != null) {
+            // 기존 관심분야 삭제
+            memberInterestRepository.deleteByMember(member);
+            log.info("기존 관심분야 삭제 완료");
+
+            // 새로운 관심분야 추가
+            List<MemberInterest> interests = request.getInterests().stream()
+                    .map(interest -> MemberInterest.of(member, interest))
+                    .collect(Collectors.toList());
+
+            memberInterestRepository.saveAll(interests);
+            log.info("새 관심분야 저장 완료: count={}", interests.size());
+        }
+
+        Member savedMember = memberRepository.save(member);
+        log.info("프로필 수정 완료: memberId={}, name={}", savedMember.getId(), savedMember.getName());
+
+        return savedMember;
+    }
+
+    /**
      * 지정된 회원의 관심분야 목록을 조회
      *
      * @param memberId 관심분야를 조회할 회원의 고유 식별자
@@ -188,4 +250,68 @@ public class MemberService {
                 .map(MemberInterest::getInterest)
                 .toArray(String[]::new);
     }
+
+    /**
+     * 회원이 작성한 요약 목록을 페이지네이션으로 조회
+     *
+     * @param memberId 요약을 조회할 회원의 고유 식별자
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 페이지네이션된 회원의 요약 목록
+     */
+    @Transactional
+    public MemberSummaryResponse getSummaries(final Long memberId, int page, int size) {
+        log.debug("회원 요약 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
+
+        if (page > 0) page = page - 1;
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 회원의 요약 목록 조회
+        Page<Summary> summaryPage = summaryRepository.findByMemberIdWithStats(memberId, pageable);
+
+        // 각 요약의 통계 정보 초기화 (Lazy Loading 방지)
+        summaryPage.getContent().forEach(summary -> {
+            if (summary.getSummaryStats() == null) {
+                summary.initializeSummaryStats();
+            }
+        });
+
+        // 응답 객체 생성
+        return MemberSummaryResponse.from(summaryPage);
+    }
+
+    @Transactional
+    public MemberCommentResponse getComments(final Long memberId, int page, int size){
+        log.debug("내 댓글 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
+
+        if (page > 0) page = page - 1;
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("회원을 찾을 수 없습니다: " + memberId));
+
+        // 회원의 댓글 목록 조회 (삭제되지 않은 댓글만)
+        Page<Comment> commentPage = commentRepository.findByMemberAndDeletedFalseWithSummary(member, pageable);
+
+        // 응답 객체 생성
+        return MemberCommentResponse.from(commentPage);
+    }
+
+
+//    @Transactional
+//    public MemberSummaryResponse getLikedSummaries(final Long memberId, int page, int size){
+//        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+//        if (page > 0) page = page - 1;
+//
+//        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+//        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+//        Page<Summary> likedSummaryPage = summaryRepository.findSummariesByMemberIdWithlikes(memberId, pageable);
+//        return MemberSummaryResponse.from(likedSummaryPage);
+//    }
+
 }

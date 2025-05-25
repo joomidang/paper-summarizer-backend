@@ -14,17 +14,22 @@ import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.response.MemberInterestResponse;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
+import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
+import joomidang.papersummary.member.controller.response.MemberCommentResponse;
 import joomidang.papersummary.member.controller.response.CreateProfileResponse;
+import joomidang.papersummary.member.controller.response.ProfileImageResponse;
+import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
+import joomidang.papersummary.s3.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Tag(name = "Users", description = "사용자 관련 API")
@@ -36,6 +41,7 @@ public class MemberController {
 
     private final MemberService memberService;
     private final JwtTokenProvider tokenProvider;
+    private final S3Service s3Service;
 
     /**
      * 회원가입 이후 프로필 생성
@@ -64,6 +70,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<CreateProfileResponse>> createProfile(
             @Valid @RequestBody ProfileCreateRequest request, Authentication authentication, HttpServletRequest httpRequest) {
 
+        // providerUid로 고쳐야 하는데 언제 고치지
         // 토큰에서 사용자 정보 확인
         String token = httpRequest.getHeader("Authorization");
         if (token != null) {
@@ -91,6 +98,36 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_CREATED, response));
     }
 
+
+    /**
+     * 사용자 프로필 수정
+     *
+     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @return 수정된 프로필 정보가 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 프로필 수정", description = "인증된 사용자의 프로필 정보(닉네임, 관심분야, 프로필 이미지)를 수정합니다. 모든 필드는 선택적입니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "프로필 수정 성공", responseCode = "200")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "인증 실패", responseCode = "403")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "잘못된 입력형태", responseCode = "400")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "닉네임 중복", responseCode = "409")
+    @PatchMapping("/me/profile")
+    public ResponseEntity<ApiResponse<CreateProfileResponse>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @Parameter(hidden = true)
+            @Authenticated String providerUid
+    ) {
+        log.info("프로필 수정 요청: providerUid={}, request={}", providerUid, request);
+
+        // 프로필 수정
+        Member updatedMember = memberService.updateProfile(providerUid, request);
+
+        // 응답 생성
+        CreateProfileResponse response = CreateProfileResponse.from(updatedMember);
+
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_UPDATED, response));
+    }
+
     /**
      * 인증된 사용자의 관심분야를 조회
      *
@@ -108,9 +145,95 @@ public class MemberController {
         MemberInterestResponse response = MemberInterestResponse.from(interests);
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));
     }
-//    public ResponseEntity<ApiResponse<Void>> getMyProfile(
-//            @RequestBody HttpServletRequest request, Authentication authentication
+
+    /**
+     * 인증된 사용자가 작성한 요약 목록을 조회
+     *
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @param page 페이지 번호 (기본값: 1)
+     * @param size 페이지 크기 (기본값: 10)
+     * @return 페이지네이션된 요약 목록 데이터가 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 작성 요약 목록 조회", description = "인증된 사용자가 작성한 요약 목록을 페이지네이션으로 조회합니다.")
+    @GetMapping("/me/summaries")
+    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getSummaries(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
+    ){
+        log.debug("사용자 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        MemberSummaryResponse summaries = memberService.getSummaries(memberId, page, size);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_SUMMARIES, summaries));
+    }
+
+//    @GetMapping("/me/likes")
+//    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getLikedSummaries(
+//            @Parameter(hidden = true)
+//            @Authenticated String providerUid,
+//            @Parameter(description = "페이지 번호 (1부터 시작)")
+//            @RequestParam(required = false, defaultValue = "1") int page,
+//            @Parameter(description = "페이지 크기")
+//            @RequestParam(required = false, defaultValue = "10") int size
 //    ){
-//        return
+//        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+//        Long memberId = memberService.findByProviderUid(providerUid).getId();
+//        MemberSummaryResponse summaries = memberService.getLikedSummaries(memberId, page, size);
+//        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, summaries));
 //    }
+
+    @Operation(summary = "사용자 작성 댓글 목록 조회", description = "인증된 사용자가 작성한 댓글 목록을 페이지네이션으로 조회합니다.")
+    @GetMapping("/me/comments")
+    public ResponseEntity<ApiResponse<MemberCommentResponse>> getComments(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
+    ){
+        log.debug("사용자가 작성한 댓글 모두 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        MemberCommentResponse comments = memberService.getComments(memberId, page, size);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_COMMENTS, comments));
+    }
+
+    /**
+     * 사용자 프로필 이미지 업로드
+     *
+     * @param file 업로드할 프로필 이미지 파일
+     * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
+     * @return 업로드된 이미지 URL이 포함된 ApiResponse를 담은 ResponseEntity
+     */
+    @Operation(summary = "사용자 프로필 이미지 업로드", description = "사용자의 프로필 이미지를 업로드합니다. 이미지는 자동으로 리사이징되어 저장됩니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "이미지 업로드 성공", responseCode = "200")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "인증 실패", responseCode = "403")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "잘못된 파일 형식", responseCode = "400")
+    @PostMapping(value = "/me/profile/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProfileImageResponse>> uploadProfileImage(
+            @Parameter(description = "파일 업로드", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+            @RequestParam("file") MultipartFile file,
+            @Parameter(hidden = true)
+            @Authenticated String providerUid
+    ) {
+        log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(), file.getSize() / 1024);
+
+        // 이미지 업로드 및 처리
+        String imageUrl = s3Service.uploadProfileImage(file);
+        log.info("프로필 이미지 업로드 완료: imageUrl={}", imageUrl);
+
+        // 사용자 프로필 이미지 URL 업데이트
+        UpdateProfileRequest updateRequest = UpdateProfileRequest.builder()
+                .profileImageUrl(imageUrl)
+                .build();
+        memberService.updateProfile(providerUid, updateRequest);
+        log.info("사용자 프로필 이미지 URL 업데이트 완료: providerUid={}", providerUid);
+
+        // 응답 생성
+        ProfileImageResponse response = ProfileImageResponse.from(imageUrl);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, response));
+    }
 }
