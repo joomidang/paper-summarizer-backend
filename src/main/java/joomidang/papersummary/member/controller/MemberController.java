@@ -164,20 +164,20 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_SUMMARIES, summaries));
     }
 
-    @GetMapping("/me/likes")
-    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getLikedSummaries(
-            @Parameter(hidden = true)
-            @Authenticated String providerUid,
-            @Parameter(description = "페이지 번호 (1부터 시작)")
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @Parameter(description = "페이지 크기")
-            @RequestParam(required = false, defaultValue = "10") int size
-    ){
-        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
-        Long memberId = memberService.findByProviderUid(providerUid).getId();
-        MemberSummaryResponse summaries = memberService.getLikedSummaries(memberId, page, size);
-        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, summaries));
-    }
+//    @GetMapping("/me/likes")
+//    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getLikedSummaries(
+//            @Parameter(hidden = true)
+//            @Authenticated String providerUid,
+//            @Parameter(description = "페이지 번호 (1부터 시작)")
+//            @RequestParam(required = false, defaultValue = "1") int page,
+//            @Parameter(description = "페이지 크기")
+//            @RequestParam(required = false, defaultValue = "10") int size
+//    ){
+//        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+//        Long memberId = memberService.findByProviderUid(providerUid).getId();
+//        MemberSummaryResponse summaries = memberService.getLikedSummaries(memberId, page, size);
+//        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, summaries));
+//    }
 
 
 }
