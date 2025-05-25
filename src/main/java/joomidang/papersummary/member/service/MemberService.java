@@ -184,54 +184,6 @@ public class MemberService {
     }
 
     /**
-     * 지정된 회원의 관심분야 목록을 조회
-     *
-     * @param memberId 관심분야를 조회할 회원의 고유 식별자
-     * @return 회원의 관심분야를 나타내는 문자열 배열
-     */
-    @Transactional
-    public String[] getInterests(final Long memberId) {
-        log.debug("회원 관심사 조회 시작: memberId={}", memberId);
-        List<MemberInterest> memberInterests = memberInterestRepository.findByMemberId(memberId);
-        return memberInterests.stream()
-                .map(MemberInterest::getInterest)
-                .toArray(String[]::new);
-    }
-
-    /**
-     * 회원이 작성한 요약 목록을 페이지네이션으로 조회
-     *
-     * @param memberId 요약을 조회할 회원의 고유 식별자
-     * @param page 페이지 번호 (0부터 시작)
-     * @param size 페이지 크기
-     * @return 페이지네이션된 회원의 요약 목록
-     */
-    @Transactional
-    public MemberSummaryResponse getSummaries(final Long memberId, int page, int size) {
-        log.debug("회원 요약 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
-
-        if (page > 0) {
-            page = page - 1;
-        }
-
-        // 기본 정렬: 생성일 기준 내림차순 (최신순)
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        // 회원의 요약 목록 조회
-        Page<Summary> summaryPage = summaryRepository.findByMemberIdWithStats(memberId, pageable);
-
-        // 각 요약의 통계 정보 초기화 (Lazy Loading 방지)
-        summaryPage.getContent().forEach(summary -> {
-            if (summary.getSummaryStats() == null) {
-                summary.initializeSummaryStats();
-            }
-        });
-
-        // 응답 객체 생성
-        return MemberSummaryResponse.from(summaryPage);
-    }
-
-    /**
      * 회원 프로필 정보 수정
      *
      * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
@@ -279,4 +231,62 @@ public class MemberService {
 
         return savedMember;
     }
+
+    /**
+     * 지정된 회원의 관심분야 목록을 조회
+     *
+     * @param memberId 관심분야를 조회할 회원의 고유 식별자
+     * @return 회원의 관심분야를 나타내는 문자열 배열
+     */
+    @Transactional
+    public String[] getInterests(final Long memberId) {
+        log.debug("회원 관심사 조회 시작: memberId={}", memberId);
+        List<MemberInterest> memberInterests = memberInterestRepository.findByMemberId(memberId);
+        return memberInterests.stream()
+                .map(MemberInterest::getInterest)
+                .toArray(String[]::new);
+    }
+
+    /**
+     * 회원이 작성한 요약 목록을 페이지네이션으로 조회
+     *
+     * @param memberId 요약을 조회할 회원의 고유 식별자
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 페이지네이션된 회원의 요약 목록
+     */
+    @Transactional
+    public MemberSummaryResponse getSummaries(final Long memberId, int page, int size) {
+        log.debug("회원 요약 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
+
+        if (page > 0) page = page - 1;
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 회원의 요약 목록 조회
+        Page<Summary> summaryPage = summaryRepository.findByMemberIdWithStats(memberId, pageable);
+
+        // 각 요약의 통계 정보 초기화 (Lazy Loading 방지)
+        summaryPage.getContent().forEach(summary -> {
+            if (summary.getSummaryStats() == null) {
+                summary.initializeSummaryStats();
+            }
+        });
+
+        // 응답 객체 생성
+        return MemberSummaryResponse.from(summaryPage);
+    }
+
+    @Transactional
+    public MemberSummaryResponse getLikedSummaries(final Long memberId, int page, int size){
+        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+        if (page > 0) page = page - 1;
+
+        // 기본 정렬: 생성일 기준 내림차순 (최신순)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Summary> likedSummaryPage = summaryRepository.findSummariesByMemberIdWithlikes(memberId, pageable);
+        return MemberSummaryResponse.from(likedSummaryPage);
+    }
+
 }
