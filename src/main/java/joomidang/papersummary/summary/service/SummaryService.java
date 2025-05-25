@@ -12,6 +12,7 @@ import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
@@ -29,6 +30,7 @@ import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +49,7 @@ public class SummaryService {
     private final MemberService memberService;
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
+    private final SummaryLikeService summaryLikeService;
     private final StatsEventPublisher statsEventPublisher;
 
     @Transactional
@@ -215,6 +218,9 @@ public class SummaryService {
         return SummaryDetailResponse.from(summary, markdownUrl, tags);
     }
 
+    /**
+     * 요약본 상태 정보 포함해서 조회
+     */
     public Summary findByIdWithStats(Long summaryId) {
         log.debug("요약 정보 조회 시작: summaryId={}", summaryId);
 
@@ -228,19 +234,39 @@ public class SummaryService {
         return summary;
     }
 
+    /**
+     * 요약본 상태 정보 없이 조회
+     */
     public Summary findByIdWithoutStats(Long summaryId) {
         return summaryRepository.findByIdWithoutStats(summaryId)
                 .orElseThrow(() -> new SummaryNotFoundException(summaryId));
     }
 
-    public SummaryLikeResponse likeSummary(String providerUid, Long summaryId, String action) {
-        log.debug("요약본 action={} 시작: summaryId={}", action, summaryId);
-        memberService.findByProviderUid(providerUid);
-        publishLikeEvent(summaryId, action);
-        Summary summary = findByIdWithoutStats(summaryId);
-        int updatedCount = summary.getLikeCount();
-        log.debug("요약본 action={} 완료: summaryId={}", action, summaryId);
-        return SummaryLikeResponse.from(action, updatedCount);
+    /**
+     * 요약본 좋아요
+     */
+    public SummaryLikeResponse toggleLikeSummary(String providerUid, Long summaryId) {
+        log.debug("요약본 좋아요 토글 시작: summaryId={}", summaryId);
+
+        Summary summary = findByIdWithStats(summaryId);
+        validateSummaryForLike(summary);
+
+        int beforeCount = summary.getLikeCount();
+
+        boolean isLiked = summaryLikeService.toggleLike(providerUid, summary);
+
+        int updatedCount = isLiked ? beforeCount + 1 : beforeCount - 1;
+        updatedCount = Math.max(0, updatedCount);
+
+        log.debug("요약본 좋아요 토글 완료: summaryId={}, isLiked={}", summaryId, isLiked);
+        return new SummaryLikeResponse(isLiked, updatedCount);
+    }
+
+    /**
+     * 좋아요한 요약본 조회
+     */
+    public LikedSummaryListResponse getLikedSummaries(String providerUid, Pageable pageable) {
+        return summaryLikeService.getLikedSummaries(providerUid, pageable);
     }
 
     private void validateS3Key(String s3Key) {
@@ -304,6 +330,16 @@ public class SummaryService {
     private void validateAccess(Summary summary, Member requester) {
         if (summary.isNotSameMemberId(requester.getId())) {
             throw new AccessDeniedException();
+        }
+    }
+
+    private void validateSummaryForLike(Summary summary) {
+        if (summary.getPublishStatus() != PublishStatus.PUBLISHED) {
+            throw new IllegalArgumentException("발행되지 않은 요약본에는 좋아요할 수 없습니다.");
+        }
+
+        if (summary.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 요약본에는 좋아요할 수 없습니다.");
         }
     }
 

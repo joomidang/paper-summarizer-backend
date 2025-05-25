@@ -1,8 +1,10 @@
 package joomidang.papersummary.summary.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -13,21 +15,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.Member;
+import joomidang.papersummary.member.exception.MemberNotFoundException;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
+import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
@@ -42,6 +49,9 @@ import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 public class SummaryServiceTest {
 
@@ -53,6 +63,7 @@ public class SummaryServiceTest {
     private MemberService memberService;
     private S3Service s3Service;
     private SummaryVersionService summaryVersionService;
+    private SummaryLikeService summaryLikeService;
     private StatsEventPublisher statsEventPublisher;
 
     @BeforeEach
@@ -64,6 +75,7 @@ public class SummaryServiceTest {
         memberService = mock(MemberService.class);
         s3Service = mock(S3Service.class);
         summaryVersionService = mock(SummaryVersionService.class);
+        summaryLikeService = mock(SummaryLikeService.class);
         statsEventPublisher = mock(StatsEventPublisher.class);
 
         summaryService = new SummaryService(
@@ -74,6 +86,7 @@ public class SummaryServiceTest {
                 memberService,
                 s3Service,
                 summaryVersionService,
+                summaryLikeService,
                 statsEventPublisher
         );
     }
@@ -509,4 +522,180 @@ public class SummaryServiceTest {
         verify(memberService, times(1)).findByProviderUid(providerUid);
         verify(summaryRepository, times(1)).findByIdWithoutStats(summaryId);
     }
+
+    @Test
+    @DisplayName("요약본 좋아요 토글 성공 테스트 - 좋아요 추가")
+    void toggleLikeSummaryAddLike() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long summaryId = 1L;
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getLikeCount()).thenReturn(0); // 좋아요 추가 전 카운트
+        when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.PUBLISHED);
+        when(mockSummary.isDeleted()).thenReturn(false);
+        when(summaryRepository.findByIdWithStats(summaryId)).thenReturn(Optional.of(mockSummary));
+
+        // SummaryLikeService에서 좋아요 추가 반환
+        when(summaryLikeService.toggleLike(providerUid, mockSummary)).thenReturn(true);
+
+        // when
+        SummaryLikeResponse response = summaryService.toggleLikeSummary(providerUid, summaryId);
+
+        // then
+        assertNotNull(response);
+        assertTrue(response.liked());
+        assertEquals(1, response.likeCount());
+
+        verify(summaryRepository, times(1)).findByIdWithStats(summaryId);
+        verify(summaryLikeService, times(1)).toggleLike(providerUid, mockSummary);
+    }
+
+    @Test
+    @DisplayName("요약본 좋아요 토글 성공 테스트 - 좋아요 취소")
+    void toggleLikeSummaryRemoveLike() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long summaryId = 1L;
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(summaryId);
+        when(mockSummary.getLikeCount()).thenReturn(1);
+        when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.PUBLISHED);
+        when(mockSummary.isDeleted()).thenReturn(false);
+
+        when(summaryRepository.findByIdWithStats(summaryId)).thenReturn(Optional.of(mockSummary));
+        when(summaryLikeService.toggleLike(providerUid, mockSummary)).thenReturn(false);
+
+        // when
+        SummaryLikeResponse response = summaryService.toggleLikeSummary(providerUid, summaryId);
+
+        // then
+        assertNotNull(response);
+        assertFalse(response.liked());
+        assertEquals(0, response.likeCount());
+
+        verify(summaryRepository, times(1)).findByIdWithStats(summaryId);
+        verify(summaryLikeService, times(1)).toggleLike(providerUid, mockSummary);
+    }
+
+    @Test
+    @DisplayName("내가 좋아요한 요약본 목록 조회 성공 테스트")
+    void getLikedSummariesSuccess() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
+
+        // 간단한 응답 객체 생성 (from 메서드 테스트는 별도로)
+        LikedSummaryResponse summary1 = new LikedSummaryResponse(
+                1L, "첫 번째 요약본", "요약 내용1", "작성자1",
+                LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+        );
+        LikedSummaryResponse summary2 = new LikedSummaryResponse(
+                2L, "두 번째 요약본", "요약 내용2", "작성자2",
+                LocalDateTime.now(), LocalDateTime.now(), 15, 8, 2
+        );
+
+        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
+                Arrays.asList(summary1, summary2),
+                0,  // currentPage
+                1,  // totalPages
+                2L, // totalElements
+                false, // hasNext
+                false  // hasPrevious
+        );
+
+        when(summaryLikeService.getLikedSummaries(providerUid, pageable)).thenReturn(mockResponse);
+
+        // when
+        LikedSummaryListResponse response = summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(2, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(2L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자의 좋아요한 요약본 조회 시 예외 발생 테스트")
+    void getLikedSummariesMemberNotFound() {
+        // given
+        String providerUid = "non-existent-uid";
+        Pageable pageable = PageRequest.of(0, 20);
+
+        when(summaryLikeService.getLikedSummaries(providerUid, pageable))
+                .thenThrow(new MemberNotFoundException("사용자를 찾을 수 없습니다."));
+
+        // when & then
+        assertThrows(MemberNotFoundException.class, () -> {
+            summaryService.getLikedSummaries(providerUid, pageable);
+        });
+
+        verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
+    }
+
+    @Test
+    @DisplayName("페이징이 올바르게 동작하는지 테스트")
+    void getLikedSummariesPagingTest() {
+        // given
+        String providerUid = "test-provider-uid";
+        Pageable pageable = PageRequest.of(1, 10, Sort.by("createdAt").descending()); // 두 번째 페이지
+
+        // 총 25개 중 두 번째 페이지(10개) 응답 생성
+        List<LikedSummaryResponse> summaries = createMockLikedSummaryResponseList(10);
+        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
+                summaries,
+                1,    // currentPage
+                3,    // totalPages
+                25L,  // totalElements
+                true, // hasNext
+                true  // hasPrevious
+        );
+
+        when(summaryLikeService.getLikedSummaries(providerUid, pageable)).thenReturn(mockResponse);
+
+        // when
+        LikedSummaryListResponse response = summaryService.getLikedSummaries(providerUid, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(10, response.summaries().size());
+        assertEquals(1, response.currentPage()); // 두 번째 페이지
+        assertEquals(3, response.totalPages()); // 총 3페이지 (25개 / 10개)
+        assertEquals(25L, response.totalElements());
+        assertTrue(response.hasNext()); // 다음 페이지 있음
+        assertTrue(response.hasPrevious()); // 이전 페이지 있음
+
+        verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
+    }
+
+    private LikedSummaryResponse createMockLikedSummaryResponse(Long summaryId, String title) {
+        return new LikedSummaryResponse(
+                summaryId,
+                title,
+                title + " 요약 내용",
+                "작성자" + summaryId,
+                LocalDateTime.now(), // likedAt
+                LocalDateTime.now(), // publishedAt
+                10, // viewCount
+                5,  // likeCount
+                3   // commentCount
+        );
+    }
+
+    private List<LikedSummaryResponse> createMockLikedSummaryResponseList(int count) {
+        List<LikedSummaryResponse> summaries = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            summaries.add(createMockLikedSummaryResponse((long) i, "요약본 " + i));
+        }
+        return summaries;
+    }
+
 }
