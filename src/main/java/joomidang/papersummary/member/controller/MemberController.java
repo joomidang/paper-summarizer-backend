@@ -64,6 +64,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<CreateProfileResponse>> createProfile(
             @Valid @RequestBody ProfileCreateRequest request, Authentication authentication, HttpServletRequest httpRequest) {
 
+        // providerUid로 고쳐야 하는데 언제 고치지
         // 토큰에서 사용자 정보 확인
         String token = httpRequest.getHeader("Authorization");
         if (token != null) {
