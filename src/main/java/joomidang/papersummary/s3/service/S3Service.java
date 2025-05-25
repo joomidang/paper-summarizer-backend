@@ -23,4 +23,13 @@ public interface S3Service {
      * 마크다운을 S3에 업로드
      */
     String saveMarkdownToS3(String key, String markdownContent);
+
+    /**
+     * 프로필 이미지를 처리하고 S3에 업로드
+     * Thumbnailator를 사용하여 이미지 크기를 조정하고 최적화
+     * 
+     * @param file 업로드할 프로필 이미지 파일
+     * @return 업로드된 이미지의 URL
+     */
+    String uploadProfileImage(MultipartFile file);
 }
