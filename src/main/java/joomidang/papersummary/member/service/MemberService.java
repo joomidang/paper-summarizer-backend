@@ -303,15 +303,4 @@ public class MemberService {
     }
 
 
-//    @Transactional
-//    public MemberSummaryResponse getLikedSummaries(final Long memberId, int page, int size){
-//        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
-//        if (page > 0) page = page - 1;
-//
-//        // 기본 정렬: 생성일 기준 내림차순 (최신순)
-//        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-//        Page<Summary> likedSummaryPage = summaryRepository.findSummariesByMemberIdWithlikes(memberId, pageable);
-//        return MemberSummaryResponse.from(likedSummaryPage);
-//    }
-
 }
