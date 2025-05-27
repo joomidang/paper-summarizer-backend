@@ -2,7 +2,9 @@ package joomidang.papersummary.summary.service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.common.config.rabbitmq.StatsType;
 import joomidang.papersummary.member.entity.Member;
@@ -13,6 +15,8 @@ import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.PopularSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
@@ -30,6 +34,8 @@ import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -270,6 +276,51 @@ public class SummaryService {
         return summaryLikeService.getLikedSummaries(providerUid, pageable);
     }
 
+    /**
+     * 인기 요약본 목록을 페이징으로 조회 가중치 기반 인기도 점수로 정렬(좋아요, 댓글, 조회수)
+     */
+    public PopularSummaryListResponse getPopularSummaries(Pageable pageable) {
+        log.debug("인기 요약본 목록 조회 시작: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+
+        // 발행된 요약본들을 인기도 순으로 조회
+        Page<Summary> summariesPage = summaryRepository.findPopularSummariesByPublishStatus(
+                PublishStatus.PUBLISHED, pageable);
+
+        // 빈 결과 처리
+        if (summariesPage.isEmpty()) {
+            log.debug("조회된 인기 요약본이 없음");
+            return PopularSummaryListResponse.empty(pageable);
+        }
+
+        // 요약본 ID 목록 추출
+        List<Long> summaryIds = summariesPage.getContent().stream()
+                .map(Summary::getId)
+                .toList();
+
+        // 인기도 점수 계산
+        Map<Long, Double> popularityScores = calculatePopularityScores(summaryIds);
+
+        // PopularSummaryResponse로 변환
+        List<PopularSummaryResponse> popularSummaries = summariesPage.getContent().stream()
+                .map(summary -> {
+                    Double score = popularityScores.getOrDefault(summary.getId(), 0.0);
+                    return PopularSummaryResponse.from(summary, score);
+                })
+                .toList();
+
+        // 페이지 정보를 포함한 응답 생성
+        Page<PopularSummaryResponse> responsePage = new PageImpl<>(
+                popularSummaries,
+                pageable,
+                summariesPage.getTotalElements()
+        );
+
+        log.debug("인기 요약본 목록 조회 완료: 조회된 요약본 수={}, 전체 페이지={}",
+                responsePage.getNumberOfElements(), responsePage.getTotalPages());
+
+        return PopularSummaryListResponse.from(responsePage);
+    }
+
     private void validateS3Key(String s3Key) {
         if (s3Key == null || s3Key.isBlank()) {
             log.error("S3 키가 유효하지 않음: s3Key={}", s3Key);
@@ -362,13 +413,19 @@ public class SummaryService {
                 .build();
     }
 
-    private void publishLikeEvent(Long summaryId, String action) {
-        if (action.equals("like")) {
-            statsEventPublisher.publish(summaryId, StatsType.LIKE);
-        } else if (action.equals("dislike")) {
-            statsEventPublisher.publish(summaryId, StatsType.DISLIKE);
-        } else {
-            throw new IllegalArgumentException("action은 like 또는 dislike만 가능합니다.");
+    private Map<Long, Double> calculatePopularityScores(List<Long> summaryIds) {
+        if (summaryIds.isEmpty()) {
+            return Collections.emptyMap();
         }
+        Map<Long, Double> popularityScores = new HashMap<>();
+        List<Object[]> scoreResults = summaryRepository.calculatePopularityScores(summaryIds);
+
+        for (Object[] result : scoreResults) {
+            Long summaryId = ((Number) result[0]).longValue();
+            Double score = ((Number) result[1]).doubleValue();
+            popularityScores.put(summaryId, score);
+        }
+
+        return popularityScores;
     }
 }

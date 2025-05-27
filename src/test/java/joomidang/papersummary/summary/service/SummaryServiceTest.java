@@ -32,6 +32,8 @@ import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
+import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.PopularSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
@@ -50,6 +52,8 @@ import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -90,6 +94,7 @@ public class SummaryServiceTest {
                 summaryLikeService,
                 statsEventPublisher
         );
+
     }
 
     @Test
@@ -688,6 +693,232 @@ public class SummaryServiceTest {
         assertEquals(10, response.size());
 
         verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
+    }
+
+    @Test
+    @DisplayName("인기 요약본 목록 조회 성공 테스트")
+    void getPopularSummariesSuccess() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("updatedAt").descending());
+
+        // Mock Summary 객체들 생성
+        Member mockMember1 = mock(Member.class);
+        when(mockMember1.getName()).thenReturn("작성자1");
+        when(mockMember1.getProfileImage()).thenReturn("profile1.jpg");
+
+        Member mockMember2 = mock(Member.class);
+        when(mockMember2.getName()).thenReturn("작성자2");
+        when(mockMember2.getProfileImage()).thenReturn("profile2.jpg");
+
+        Summary mockSummary1 = mock(Summary.class);
+        when(mockSummary1.getId()).thenReturn(1L);
+        when(mockSummary1.getTitle()).thenReturn("인기 요약본 1");
+        when(mockSummary1.getBrief()).thenReturn("인기 요약본 1의 내용");
+        when(mockSummary1.getMember()).thenReturn(mockMember1);
+        when(mockSummary1.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary1.getViewCount()).thenReturn(100);
+        when(mockSummary1.getLikeCount()).thenReturn(20);
+        when(mockSummary1.getCommentCount()).thenReturn(5);
+
+        Summary mockSummary2 = mock(Summary.class);
+        when(mockSummary2.getId()).thenReturn(2L);
+        when(mockSummary2.getTitle()).thenReturn("인기 요약본 2");
+        when(mockSummary2.getBrief()).thenReturn("인기 요약본 2의 내용");
+        when(mockSummary2.getMember()).thenReturn(mockMember2);
+        when(mockSummary2.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary2.getViewCount()).thenReturn(80);
+        when(mockSummary2.getLikeCount()).thenReturn(15);
+        when(mockSummary2.getCommentCount()).thenReturn(3);
+
+        List<Summary> summaries = Arrays.asList(mockSummary1, mockSummary2);
+        Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 2L);
+
+        // Repository mock 설정
+        when(summaryRepository.findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable))
+                .thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Arrays.asList(
+                new Object[]{1L, 36.0}, // summary1: 20*0.5 + 5*0.3 + 100*0.2 = 10 + 1.5 + 20 = 31.5
+                new Object[]{2L, 24.4}  // summary2: 15*0.5 + 3*0.3 + 80*0.2 = 7.5 + 0.9 + 16 = 24.4
+        );
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(1L, 2L)))
+                .thenReturn(scoreResults);
+
+        // when
+        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(2, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(2L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 첫 번째 요약본 검증
+        PopularSummaryResponse firstSummary = response.summaries().get(0);
+        assertEquals(1L, firstSummary.summaryId());
+        assertEquals("인기 요약본 1", firstSummary.title());
+        assertEquals("인기 요약본 1의 내용", firstSummary.brief());
+        assertEquals("작성자1", firstSummary.authorName());
+        assertEquals("profile1.jpg", firstSummary.authorProfileImage());
+        assertEquals(100, firstSummary.viewCount());
+        assertEquals(20, firstSummary.likeCount());
+        assertEquals(5, firstSummary.commentCount());
+        assertEquals(36.0, firstSummary.popularityScore());
+
+        // 두 번째 요약본 검증
+        PopularSummaryResponse secondSummary = response.summaries().get(1);
+        assertEquals(2L, secondSummary.summaryId());
+        assertEquals("인기 요약본 2", secondSummary.title());
+        assertEquals(24.4, secondSummary.popularityScore());
+
+        // Mock 호출 검증
+        verify(summaryRepository, times(1)).findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable);
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(1L, 2L));
+    }
+
+    @Test
+    @DisplayName("인기 요약본 목록 조회 시 빈 결과 테스트")
+    void getPopularSummariesEmpty() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Summary> emptySummariesPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+
+        when(summaryRepository.findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable))
+                .thenReturn(emptySummariesPage);
+
+        // when
+        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+
+        // then
+        assertNotNull(response);
+        assertTrue(response.summaries().isEmpty());
+        assertEquals(0, response.currentPage());
+        assertEquals(0, response.totalPages());
+        assertEquals(0L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 빈 결과일 때는 인기도 점수 계산 호출되지 않음
+        verify(summaryRepository, times(1)).findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable);
+        verify(summaryRepository, times(0)).calculatePopularityScores(any());
+    }
+
+    @Test
+    @DisplayName("인기 요약본 목록 조회 시 인기도 점수가 없는 경우 테스트")
+    void getPopularSummariesWithoutPopularityScore() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Member mockMember = mock(Member.class);
+        when(mockMember.getName()).thenReturn("작성자");
+        when(mockMember.getProfileImage()).thenReturn("profile.jpg");
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(1L);
+        when(mockSummary.getTitle()).thenReturn("점수 없는 요약본");
+        when(mockSummary.getBrief()).thenReturn("점수 없는 요약본 내용");
+        when(mockSummary.getMember()).thenReturn(mockMember);
+        when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary.getViewCount()).thenReturn(0);
+        when(mockSummary.getLikeCount()).thenReturn(0);
+        when(mockSummary.getCommentCount()).thenReturn(0);
+
+        Page<Summary> summariesPage = new PageImpl<>(Arrays.asList(mockSummary), pageable, 1L);
+
+        when(summaryRepository.findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable))
+                .thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과가 비어있는 경우
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(1L)))
+                .thenReturn(Collections.emptyList());
+
+        // when
+        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(1, response.summaries().size());
+
+        PopularSummaryResponse summaryResponse = response.summaries().get(0);
+        assertEquals(1L, summaryResponse.summaryId());
+        assertEquals("점수 없는 요약본", summaryResponse.title());
+        assertEquals(0.0, summaryResponse.popularityScore()); // 기본값 0.0
+
+        verify(summaryRepository, times(1)).findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable);
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(1L));
+    }
+
+    @Test
+    @DisplayName("인기 요약본 목록 조회 시 페이징 정보 검증 테스트")
+    void getPopularSummariesPagingValidation() {
+        // given
+        Pageable pageable = PageRequest.of(1, 5); // 두 번째 페이지, 페이지 크기 5
+
+        // 총 12개 요약본 중 두 번째 페이지 (6~10번째) 반환
+        List<Summary> summaries = createMockSummaries(5, 6); // 6번부터 10번까지 5개
+        Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 12L); // 총 12개
+
+        when(summaryRepository.findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable))
+                .thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock
+        List<Object[]> scoreResults = Arrays.asList(
+                new Object[]{6L, 30.0},
+                new Object[]{7L, 25.0},
+                new Object[]{8L, 20.0},
+                new Object[]{9L, 15.0},
+                new Object[]{10L, 10.0}
+        );
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(6L, 7L, 8L, 9L, 10L)))
+                .thenReturn(scoreResults);
+
+        // when
+        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(5, response.summaries().size());
+        assertEquals(1, response.currentPage()); // 두 번째 페이지 (0-based)
+        assertEquals(3, response.totalPages()); // 총 12개 / 5개 = 3페이지 (반올림)
+        assertEquals(12L, response.totalElements());
+        assertTrue(response.hasNext()); // 다음 페이지 있음
+        assertTrue(response.hasPrevious()); // 이전 페이지 있음
+
+        // 첫 번째 요약본이 6번인지 확인
+        assertEquals(6L, response.summaries().get(0).summaryId());
+        assertEquals("인기 요약본 6", response.summaries().get(0).title());
+
+        verify(summaryRepository, times(1)).findPopularSummariesByPublishStatus(PublishStatus.PUBLISHED, pageable);
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(6L, 7L, 8L, 9L, 10L));
+    }
+
+    // Helper method for creating mock summaries
+    private List<Summary> createMockSummaries(int count, int startId) {
+        List<Summary> summaries = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            Long summaryId = (long) (startId + i);
+
+            Member mockMember = mock(Member.class);
+            when(mockMember.getName()).thenReturn("작성자" + summaryId);
+            when(mockMember.getProfileImage()).thenReturn("profile" + summaryId + ".jpg");
+
+            Summary mockSummary = mock(Summary.class);
+            when(mockSummary.getId()).thenReturn(summaryId);
+            when(mockSummary.getTitle()).thenReturn("인기 요약본 " + summaryId);
+            when(mockSummary.getBrief()).thenReturn("인기 요약본 " + summaryId + "의 내용");
+            when(mockSummary.getMember()).thenReturn(mockMember);
+            when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
+            when(mockSummary.getViewCount()).thenReturn(10 * i);
+            when(mockSummary.getLikeCount()).thenReturn(5 * i);
+            when(mockSummary.getCommentCount()).thenReturn(2 * i);
+
+            summaries.add(mockSummary);
+        }
+        return summaries;
     }
 
     private LikedSummaryResponse createMockLikedSummaryResponse(Long summaryId, String title) {

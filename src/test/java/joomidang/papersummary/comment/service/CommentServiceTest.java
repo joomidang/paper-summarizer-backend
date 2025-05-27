@@ -29,6 +29,7 @@ import joomidang.papersummary.comment.exception.InvalidParentCommentException;
 import joomidang.papersummary.comment.exception.UnpublishedSummaryCommentException;
 import joomidang.papersummary.comment.repository.CommentLikeRepository;
 import joomidang.papersummary.comment.repository.CommentRepository;
+import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.Role;
@@ -51,6 +52,7 @@ class CommentServiceTest {
     private SummaryService summaryService;
     private MemberService memberService;
     private CommentLikeRepository commentLikeRepository;
+    private StatsEventPublisher statsEventPublisher;
 
     private Member testMember;
     private Member anotherMember;
@@ -69,8 +71,10 @@ class CommentServiceTest {
         summaryService = mock(SummaryService.class);
         memberService = mock(MemberService.class);
         commentLikeRepository = mock(CommentLikeRepository.class);
+        statsEventPublisher = mock(StatsEventPublisher.class);
 
-        commentService = new CommentService(commentRepository, summaryService, memberService, commentLikeRepository);
+        commentService = new CommentService(commentRepository, summaryService, memberService, commentLikeRepository,
+                statsEventPublisher);
 
         // 테스트용 Member 생성
         testMember = Member.builder()
