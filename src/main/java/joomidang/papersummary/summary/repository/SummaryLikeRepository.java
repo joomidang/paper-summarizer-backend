@@ -23,4 +23,6 @@ public interface SummaryLikeRepository extends JpaRepository<SummaryLike, Long> 
 
     //특정 사용자가 특정 요약본에 좋아요를 눌렀는지
     Optional<SummaryLike> findByMemberAndSummary(Member member, Summary summary);
+
+    long countByMemberId(Long memberId);
 }

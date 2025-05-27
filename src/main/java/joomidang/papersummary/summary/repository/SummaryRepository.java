@@ -26,7 +26,6 @@ public interface SummaryRepository extends JpaRepository<Summary, Long> {
             countQuery = "SELECT COUNT(s) FROM Summary s WHERE s.member.id = :memberId AND s.isDeleted = false")
     Page<Summary> findByMemberIdWithStats(@Param("memberId") Long memberId, Pageable pageable);
 
-
     @Query(value = "SELECT s FROM Summary s JOIN FETCH s.summaryStats st JOIN FETCH s.member m "
             + "WHERE s.publishStatus = :publishStatus AND s.isDeleted = false "
             + "ORDER BY ("
