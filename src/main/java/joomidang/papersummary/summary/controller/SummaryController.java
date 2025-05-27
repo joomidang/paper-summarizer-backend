@@ -155,10 +155,8 @@ public class SummaryController {
     public ResponseEntity<ApiResponse<SummaryPublishResponse>> publishSummary(
             @Parameter(hidden = true)
             @Authenticated String providerUid,
-
             @Parameter(description = "발행할 요약본 ID", required = true, example = "1")
             @PathVariable Long summaryId,
-
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "요약본 발행 내용",
                     required = true,

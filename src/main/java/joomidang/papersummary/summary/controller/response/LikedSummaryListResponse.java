@@ -4,24 +4,26 @@ import java.util.List;
 import joomidang.papersummary.summary.entity.SummaryLike;
 import org.springframework.data.domain.Page;
 
-public record LikedSummaryListResponse(List<LikedSummaryResponse> summaries,
-                                       int currentPage,
-                                       int totalPages,
-                                       long totalElements,
-                                       boolean hasNext,
-                                       boolean hasPrevious) {
+public record LikedSummaryListResponse(
+        ContentWrapper content,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages) {
+
+    public record ContentWrapper(List<LikedSummaryResponse> content) {}
+
     public static LikedSummaryListResponse from(Page<SummaryLike> summaryLikePage) {
         List<LikedSummaryResponse> summaries = summaryLikePage.getContent().stream()
                 .map(LikedSummaryResponse::from)
                 .toList();
 
         return new LikedSummaryListResponse(
-                summaries,
-                summaryLikePage.getNumber(),
-                summaryLikePage.getTotalPages(),
+                new ContentWrapper(summaries),
+                summaryLikePage.getNumber() + 1,
+                summaryLikePage.getSize(),
                 summaryLikePage.getTotalElements(),
-                summaryLikePage.hasNext(),
-                summaryLikePage.hasPrevious()
+                summaryLikePage.getTotalPages()
         );
     }
 }
