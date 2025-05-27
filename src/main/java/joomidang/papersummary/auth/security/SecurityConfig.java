@@ -52,6 +52,8 @@ public class SecurityConfig {
                                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**",
+                                "/api/summaries/{summaryId}",
+                                "/api/summaries/popular",
                                 "/api/papers/*/callback",
                                 "/api/papers/*/events",//TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
                                 "/swagger-ui.html",

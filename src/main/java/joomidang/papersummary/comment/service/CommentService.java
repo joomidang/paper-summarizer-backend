@@ -19,6 +19,8 @@ import joomidang.papersummary.comment.exception.InvalidParentCommentException;
 import joomidang.papersummary.comment.exception.UnpublishedSummaryCommentException;
 import joomidang.papersummary.comment.repository.CommentLikeRepository;
 import joomidang.papersummary.comment.repository.CommentRepository;
+import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
+import joomidang.papersummary.common.config.rabbitmq.StatsType;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.summary.entity.PublishStatus;
@@ -41,6 +43,7 @@ public class CommentService {
     private final SummaryService summaryService;
     private final MemberService memberService;
     private final CommentLikeRepository commentLikeRepository;
+    private final StatsEventPublisher statsEventPublisher;
 
     /**
      * 댓글 작성
@@ -56,6 +59,7 @@ public class CommentService {
                 .member(member)
                 .build();
         Comment savedComment = commentRepository.save(comment);
+        statsEventPublisher.publish(summaryId, StatsType.COMMENT);
         log.debug("댓글 작성 완료 : commentId={}", savedComment.getContent());
         return CommentResponse.from(savedComment);
     }
@@ -64,12 +68,12 @@ public class CommentService {
      * 대댓글 작성
      */
     @Transactional
-    public CommentResponse createReply(String providerUid, Long summeryId, Long parentCommentId, String content) {
+    public CommentResponse createReply(String providerUid, Long summaryId, Long parentCommentId, String content) {
         log.debug("대댓글 작성 시작: parentCommentId");
-        Summary summary = validateSummaryForComment(summeryId);
+        Summary summary = validateSummaryForComment(summaryId);
         Comment parentComment = findCommentById(parentCommentId);
 
-        validateParentComment(summeryId, parentCommentId, parentComment);
+        validateParentComment(summaryId, parentCommentId, parentComment);
 
         Member member = memberService.findByProviderUid(providerUid);
 
@@ -82,6 +86,7 @@ public class CommentService {
 
         Comment savedReplyComment = commentRepository.save(replyComment);
         parentComment.addChild(savedReplyComment);
+        statsEventPublisher.publish(summaryId, StatsType.COMMENT);
         log.debug("대댓글 작성 완료 : replyCommentId={}", savedReplyComment.getId());
 
         return CommentResponse.from(savedReplyComment);
@@ -117,6 +122,7 @@ public class CommentService {
         validateCommentOwnership(comment, providerUid);
 
         comment.softDelete();
+        statsEventPublisher.publish(comment.getSummary().getId(), StatsType.UNCOMMENT);
         log.info("댓글 삭제 완료: commentId={}", commentId);
     }
 
