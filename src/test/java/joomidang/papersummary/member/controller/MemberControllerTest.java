@@ -10,6 +10,7 @@ import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.Role;
 import joomidang.papersummary.member.exception.MemberDuplicateException;
 import joomidang.papersummary.member.service.MemberService;
+import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
 import joomidang.papersummary.summary.service.SummaryLikeService;
@@ -234,16 +235,36 @@ class MemberControllerTest {
     void getLikedSummariesSuccessTest() throws Exception {
         // Given
         List<LikedSummaryResponse> summaries = new ArrayList<>();
+
+        // Create author responses
+        AuthorResponse author1 = AuthorResponse.builder()
+                .id(42L)
+                .username("작성자1")
+                .profileImageUrl("https://example.com/profiles/42.png")
+                .build();
+
+        AuthorResponse author2 = AuthorResponse.builder()
+                .id(55L)
+                .username("작성자2")
+                .profileImageUrl("https://example.com/profiles/55.png")
+                .build();
+
+        // Create tags
+        List<String> tags = Arrays.asList("GPT", "ML");
+
+        // Create summary responses
         summaries.add(new LikedSummaryResponse(
-                1L, "첫 번째 요약본", "요약 내용1", "작성자1",
-                LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+                1L, "첫 번째 요약본", author1,
+                LocalDateTime.now(), LocalDateTime.now(), 5, tags
         ));
         summaries.add(new LikedSummaryResponse(
-                2L, "두 번째 요약본", "요약 내용2", "작성자2",
-                LocalDateTime.now(), LocalDateTime.now(), 15, 8, 2
+                2L, "두 번째 요약본", author2,
+                LocalDateTime.now(), LocalDateTime.now(), 8, tags
         ));
 
-        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(summaries, 0, 1, 2L, false, false);
+        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
+                new LikedSummaryListResponse.ContentWrapper(summaries), 
+                1, 10, 2L, 1);
 
         when(summaryLikeService.getLikedSummaries(any(), any(Pageable.class))).thenReturn(mockResponse);
 
@@ -256,17 +277,20 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
                 .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getMessage()))
-                .andExpect(jsonPath("$.data.summaries").isArray())
-                .andExpect(jsonPath("$.data.summaries.length()").value(2))
-                .andExpect(jsonPath("$.data.summaries[0].summaryId").value(1))
-                .andExpect(jsonPath("$.data.summaries[0].title").value("첫 번째 요약본"))
-                .andExpect(jsonPath("$.data.summaries[1].summaryId").value(2))
-                .andExpect(jsonPath("$.data.summaries[1].title").value("두 번째 요약본"))
-                .andExpect(jsonPath("$.data.currentPage").value(0))
+                .andExpect(jsonPath("$.data.content.content").isArray())
+                .andExpect(jsonPath("$.data.content.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content.content[0].summaryId").value(1))
+                .andExpect(jsonPath("$.data.content.content[0].title").value("첫 번째 요약본"))
+                .andExpect(jsonPath("$.data.content.content[0].author.id").value(42))
+                .andExpect(jsonPath("$.data.content.content[0].author.username").value("작성자1"))
+                .andExpect(jsonPath("$.data.content.content[1].summaryId").value(2))
+                .andExpect(jsonPath("$.data.content.content[1].title").value("두 번째 요약본"))
+                .andExpect(jsonPath("$.data.content.content[1].author.id").value(55))
+                .andExpect(jsonPath("$.data.content.content[1].author.username").value("작성자2"))
+                .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.totalElements").value(2))
-                .andExpect(jsonPath("$.data.hasNext").value(false))
-                .andExpect(jsonPath("$.data.hasPrevious").value(false));
+                .andExpect(jsonPath("$.data.size").value(10));
     }
 
     @Test
@@ -275,15 +299,27 @@ class MemberControllerTest {
         // Given
         // 좋아요한 요약 목록 응답 생성 (페이지 2, 총 25개 항목)
         List<LikedSummaryResponse> summaries = new ArrayList<>();
+
+        // Create tags
+        List<String> tags = Arrays.asList("GPT", "ML");
+
         for (int i = 11; i <= 20; i++) {
+            // Create author response for each summary
+            AuthorResponse author = AuthorResponse.builder()
+                    .id((long) i)
+                    .username("작성자 " + i)
+                    .profileImageUrl("https://example.com/profiles/" + i + ".png")
+                    .build();
+
             summaries.add(new LikedSummaryResponse(
-                    (long) i, "요약본 " + i, "요약 내용 " + i, "작성자 " + i,
-                    LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+                    (long) i, "요약본 " + i, author,
+                    LocalDateTime.now(), LocalDateTime.now(), 5, tags
             ));
         }
 
         LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
-                summaries, 1, 3, 25L, true, true
+                new LikedSummaryListResponse.ContentWrapper(summaries), 
+                2, 10, 25L, 3
         );
 
         when(summaryLikeService.getLikedSummaries(any(), any(Pageable.class))).thenReturn(mockResponse);
@@ -297,12 +333,11 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
                 .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getMessage()))
-                .andExpect(jsonPath("$.data.summaries").isArray())
-                .andExpect(jsonPath("$.data.summaries.length()").value(10))
-                .andExpect(jsonPath("$.data.currentPage").value(1))
+                .andExpect(jsonPath("$.data.content.content").isArray())
+                .andExpect(jsonPath("$.data.content.content.length()").value(10))
+                .andExpect(jsonPath("$.data.page").value(2))
                 .andExpect(jsonPath("$.data.totalPages").value(3))
                 .andExpect(jsonPath("$.data.totalElements").value(25))
-                .andExpect(jsonPath("$.data.hasNext").value(true))
-                .andExpect(jsonPath("$.data.hasPrevious").value(true));
+                .andExpect(jsonPath("$.data.size").value(10));
     }
 }
