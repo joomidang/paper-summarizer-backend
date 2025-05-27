@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
@@ -21,6 +22,8 @@ import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
 import joomidang.papersummary.summary.service.SummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -60,6 +64,44 @@ public class SummaryController {
             @Parameter(description = "조회할 요약본 ID", required = true, example = "1")
             @PathVariable Long summaryId) {
         SummaryDetailResponse response = summaryService.getSummaryDetail(summaryId);
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
+
+    @Operation(
+            summary = "인기 요약본 목록 조회",
+            description = "좋아요, 댓글, 조회수를 가중치로 계산한 인기도 기준으로 요약본 목록을 조회합니다. " +
+                    "가중치: 좋아요 50%, 댓글 30%, 조회수 20%"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "인기 요약본 목록 조회 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "서버 오류"
+            )
+    })
+    @GetMapping("/popular")
+    public ResponseEntity<ApiResponse<PopularSummaryListResponse>> getPopularSummaries(
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(required = false, defaultValue = "0") int page,
+
+            @Parameter(description = "페이지 크기 (기본값: 20)", example = "20")
+            @RequestParam(required = false, defaultValue = "20") int size
+    ) {
+        log.info("인기 요약본 목록 조회 요청: page={}, size={}", page, size);
+
+        // 페이지 크기 제한
+        if (size > 100) {
+            size = 100;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+
+        log.info("인기 요약본 목록 조회 완료: 조회된 요약본 수={}", response.summaries().size());
+
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
     }
 
