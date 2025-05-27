@@ -9,6 +9,7 @@ import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.controller.response.MemberCommentResponse;
+import joomidang.papersummary.member.controller.response.MemberProfileResponse;
 import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
@@ -18,6 +19,7 @@ import joomidang.papersummary.member.exception.MemberNotFoundException;
 import joomidang.papersummary.member.repository.MemberInterestRepository;
 import joomidang.papersummary.member.repository.MemberRepository;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.summary.repository.SummaryLikeRepository;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +44,7 @@ public class MemberService {
     private final MemberInterestRepository memberInterestRepository;
     private final SummaryRepository summaryRepository;
     private final CommentRepository commentRepository;
-
+    private final SummaryLikeRepository summaryLikeRepository;
     /**
      * 회원 정보 저장
      *
@@ -302,5 +304,33 @@ public class MemberService {
         return MemberCommentResponse.from(commentPage);
     }
 
+//    @Transactional
+//    public MemberProfileResponse getMemberProfile(final String providerUid){
+//        Member member = findByProviderUid(providerUid);
+//        Long memberId = member.getId();
+//        String[] interests = getInterests(memberId);
+//        Long summaryPostCount = summaryRepository.countByMemberId(memberId);
+//        Long summaryLikeCount = summaryLikeRepository.countByMemberId(memberId);
+//        Long commentCount = commentRepository.countByMemberIdAndIsDeletedFalse(memberId);
+//
+//        log.info("프로필 조회 완료: memberId={}, summaryCount={}, likedSummaryCount={}, commentCount={}",
+//                member.getId(), summaryPostCount, summaryLikeCount, commentCount);
+//
+//        return MemberProfileResponse.from(member, interests, summaryPostCount, summaryLikeCount, commentCount);
+//    }
+
+    @Transactional
+    public MemberProfileResponse getMemberProfile(final Long memberId){
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberNotFoundException("사용자를 찾을 수 없습니다."));
+        String[] interests = getInterests(memberId);
+        Long summaryPostCount = summaryRepository.countByMemberId(memberId);
+        Long summaryLikeCount = summaryLikeRepository.countByMemberId(memberId);
+        Long commentCount = commentRepository.countByMemberIdAndIsDeletedFalse(memberId);
+
+        log.info("프로필 조회 완료: memberId={}, summaryCount={}, likedSummaryCount={}, commentCount={}",
+                member.getId(), summaryPostCount, summaryLikeCount, commentCount);
+
+        return MemberProfileResponse.from(member, interests, summaryPostCount, summaryLikeCount, commentCount);
+    }
 
 }

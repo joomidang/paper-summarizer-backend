@@ -27,4 +27,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             + "AND c.isDeleted = false ORDER BY c.createdAt DESC",
             countQuery = "SELECT COUNT(c) FROM Comment c WHERE c.member =:member AND c.isDeleted = false")
     Page<Comment> findByMemberAndDeletedFalseWithSummary(@Param("member") Member member, Pageable pageable);
+
+    long countByMemberIdAndIsDeletedFalse(Long memberId);
 }

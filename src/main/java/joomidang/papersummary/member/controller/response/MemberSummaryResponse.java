@@ -27,7 +27,7 @@ public class MemberSummaryResponse {
 
         return MemberSummaryResponse.builder()
                 .content(content)
-                .page(summaryPage.getNumber() + 1) // Page is 0-based, but we want 1-based for the response
+                .page(summaryPage.getNumber() + 1)
                 .size(summaryPage.getSize())
                 .totalElements(summaryPage.getTotalElements())
                 .totalPages(summaryPage.getTotalPages())
