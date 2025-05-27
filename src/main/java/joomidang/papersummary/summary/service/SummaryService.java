@@ -245,6 +245,7 @@ public class SummaryService {
     /**
      * 요약본 좋아요
      */
+    @Transactional
     public SummaryLikeResponse toggleLikeSummary(String providerUid, Long summaryId) {
         log.debug("요약본 좋아요 토글 시작: summaryId={}", summaryId);
 
