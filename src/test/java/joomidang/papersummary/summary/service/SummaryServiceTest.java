@@ -29,6 +29,7 @@ import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
+import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
 import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
@@ -592,23 +593,39 @@ public class SummaryServiceTest {
         String providerUid = "test-provider-uid";
         Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
 
+        // Create author responses
+        AuthorResponse author1 = AuthorResponse.builder()
+                .id(42L)
+                .username("작성자1")
+                .profileImageUrl("https://example.com/profiles/42.png")
+                .build();
+
+        AuthorResponse author2 = AuthorResponse.builder()
+                .id(55L)
+                .username("작성자2")
+                .profileImageUrl("https://example.com/profiles/55.png")
+                .build();
+
+        // Create tags
+        List<String> tags = Arrays.asList("GPT", "ML");
+
         // 간단한 응답 객체 생성 (from 메서드 테스트는 별도로)
         LikedSummaryResponse summary1 = new LikedSummaryResponse(
-                1L, "첫 번째 요약본", "요약 내용1", "작성자1",
-                LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+                1L, "첫 번째 요약본", author1,
+                LocalDateTime.now(), LocalDateTime.now(), 5, tags
         );
         LikedSummaryResponse summary2 = new LikedSummaryResponse(
-                2L, "두 번째 요약본", "요약 내용2", "작성자2",
-                LocalDateTime.now(), LocalDateTime.now(), 15, 8, 2
+                2L, "두 번째 요약본", author2,
+                LocalDateTime.now(), LocalDateTime.now(), 8, tags
         );
 
+        List<LikedSummaryResponse> summaries = Arrays.asList(summary1, summary2);
         LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
-                Arrays.asList(summary1, summary2),
-                0,  // currentPage
-                1,  // totalPages
+                new LikedSummaryListResponse.ContentWrapper(summaries),
+                1,  // page
+                20,  // size
                 2L, // totalElements
-                false, // hasNext
-                false  // hasPrevious
+                1   // totalPages
         );
 
         when(summaryLikeService.getLikedSummaries(providerUid, pageable)).thenReturn(mockResponse);
@@ -618,12 +635,11 @@ public class SummaryServiceTest {
 
         // then
         assertNotNull(response);
-        assertEquals(2, response.summaries().size());
-        assertEquals(0, response.currentPage());
+        assertEquals(2, response.content().content().size());
+        assertEquals(1, response.page());
         assertEquals(1, response.totalPages());
         assertEquals(2L, response.totalElements());
-        assertFalse(response.hasNext());
-        assertFalse(response.hasPrevious());
+        assertEquals(20, response.size());
 
         verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
     }
@@ -656,12 +672,11 @@ public class SummaryServiceTest {
         // 총 25개 중 두 번째 페이지(10개) 응답 생성
         List<LikedSummaryResponse> summaries = createMockLikedSummaryResponseList(10);
         LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
-                summaries,
-                1,    // currentPage
-                3,    // totalPages
+                new LikedSummaryListResponse.ContentWrapper(summaries),
+                2,    // page (1-based)
+                10,   // size
                 25L,  // totalElements
-                true, // hasNext
-                true  // hasPrevious
+                3     // totalPages
         );
 
         when(summaryLikeService.getLikedSummaries(providerUid, pageable)).thenReturn(mockResponse);
@@ -671,12 +686,11 @@ public class SummaryServiceTest {
 
         // then
         assertNotNull(response);
-        assertEquals(10, response.summaries().size());
-        assertEquals(1, response.currentPage()); // 두 번째 페이지
+        assertEquals(10, response.content().content().size());
+        assertEquals(2, response.page()); // 두 번째 페이지 (1-based)
         assertEquals(3, response.totalPages()); // 총 3페이지 (25개 / 10개)
         assertEquals(25L, response.totalElements());
-        assertTrue(response.hasNext()); // 다음 페이지 있음
-        assertTrue(response.hasPrevious()); // 이전 페이지 있음
+        assertEquals(10, response.size());
 
         verify(summaryLikeService, times(1)).getLikedSummaries(providerUid, pageable);
     }
@@ -908,16 +922,24 @@ public class SummaryServiceTest {
     }
 
     private LikedSummaryResponse createMockLikedSummaryResponse(Long summaryId, String title) {
+        // Create author response
+        AuthorResponse author = AuthorResponse.builder()
+                .id(summaryId)
+                .username("작성자" + summaryId)
+                .profileImageUrl("https://example.com/profiles/" + summaryId + ".png")
+                .build();
+
+        // Create tags
+        List<String> tags = Arrays.asList("GPT", "ML");
+
         return new LikedSummaryResponse(
                 summaryId,
                 title,
-                title + " 요약 내용",
-                "작성자" + summaryId,
-                LocalDateTime.now(), // likedAt
-                LocalDateTime.now(), // publishedAt
-                10, // viewCount
-                5,  // likeCount
-                3   // commentCount
+                author,
+                LocalDateTime.now(), // createdAt
+                LocalDateTime.now(), // updatedAt
+                5,                   // likes
+                tags
         );
     }
 

@@ -45,4 +45,6 @@ public interface SummaryRepository extends JpaRepository<Summary, Long> {
             + "LEFT JOIN s.summaryStats st "
             + "WHERE s.id IN :summaryIds")
     List<Object[]> calculatePopularityScores(@Param("summaryIds") List<Long> summaryIds);
+
+    long countByMemberId(Long memberId);
 }

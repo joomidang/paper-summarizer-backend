@@ -43,13 +43,15 @@ public class PaperParsingCallbackController {
                                             name = "논문 파싱 결과 예시",
                                             summary = "일반적인 논문 파싱 결과 요청 예시",
                                             value = "{\n" +
-                                                    "  \"title\": \"# FLAsHATTENTION: Fast and Memory-Efficient Exact Attention with IO-Awareness.\",\n" +
-                                                    "  \"markdownUrl\": \"https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/777/paper_777.md\",\n" +
+                                                    "  \"title\": \"# 자연어처리 연구동향: 최신 변환기 모델 분석\",\n" +
+                                                    "  \"markdownUrl\": \"https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/778/paper_778.md\",\n" +
                                                     "  \"contentListUrl\": \"https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/777/content_list.json\",\n" +
                                                     "  \"figures\": [\n" +
                                                     "    \"https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/777/images/figure_1.jpg\"\n" +
                                                     "  ],\n" +
-                                                    "  \"tables\": [https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/777/images/table_1.jpg]\n" +
+                                                    "  \"tables\": [\n" +
+                                                    "    \"https://paper-dev-test-magic-pdf-output.s3.amazonaws.com/papers/777/images/table_1.jpg\"\n" +
+                                                    "  ] \n" +
                                                     "}"
                                     ),
                                     @ExampleObject(
