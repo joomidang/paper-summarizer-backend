@@ -12,12 +12,7 @@ import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.security.JwtTokenProvider;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
-import joomidang.papersummary.member.controller.response.MemberInterestResponse;
-import joomidang.papersummary.member.controller.response.MemberSuccessCode;
-import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
-import joomidang.papersummary.member.controller.response.MemberCommentResponse;
-import joomidang.papersummary.member.controller.response.CreateProfileResponse;
-import joomidang.papersummary.member.controller.response.ProfileImageResponse;
+import joomidang.papersummary.member.controller.response.*;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
@@ -56,22 +51,9 @@ public class MemberController {
      */
     @Operation(summary = "사용자 프로필 등록", description = "사용자가 회원가입 단계에서 가입후 프로필 정보를 입력하는 API(닉네임, 관심분야 등)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "프로필 등록 성공", responseCode = "200")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            description = "인증 실패",
-            responseCode = "403",
-            content = @Content(examples = @ExampleObject(value = "{\"code\": \"AUTH-0001\", \"message\": \"인증에 실패했습니다.\"}"))
-    )
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            description = "잘못된 입력형태",
-            responseCode = "400",
-            content = @Content(examples = @ExampleObject(value = "{\"code\": \"MEM-0002\", \"message\": \"관심분야는 최소 1개 이상 입력해야 합니다.\"}"))
-    )
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            description = "닉네임 중복",
-            responseCode = "409",
-            content = @Content(examples = @ExampleObject(value = "{\"code\": \"MEM-0003\", \"message\": \"이미 사용 중인 닉네임입니다.\"}"))
-    )
-
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "인증 실패", responseCode = "403", content = @Content(examples = @ExampleObject(value = "{\"code\": \"AUTH-0001\", \"message\": \"인증에 실패했습니다.\"}")))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "잘못된 입력형태", responseCode = "400", content = @Content(examples = @ExampleObject(value = "{\"code\": \"MEM-0002\", \"message\": \"관심분야는 최소 1개 이상 입력해야 합니다.\"}")))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "닉네임 중복", responseCode = "409", content = @Content(examples = @ExampleObject(value = "{\"code\": \"MEM-0003\", \"message\": \"이미 사용 중인 닉네임입니다.\"}")))
     @PutMapping("/me/profile")
     public ResponseEntity<ApiResponse<CreateProfileResponse>> createProfile(
             @Valid @RequestBody ProfileCreateRequest request, Authentication authentication, HttpServletRequest httpRequest) {
@@ -176,21 +158,14 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_SUMMARIES, summaries));
     }
 
-//    @GetMapping("/me/likes")
-//    public ResponseEntity<ApiResponse<MemberSummaryResponse>> getLikedSummaries(
-//            @Parameter(hidden = true)
-//            @Authenticated String providerUid,
-//            @Parameter(description = "페이지 번호 (1부터 시작)")
-//            @RequestParam(required = false, defaultValue = "1") int page,
-//            @Parameter(description = "페이지 크기")
-//            @RequestParam(required = false, defaultValue = "10") int size
-//    ){
-//        log.debug("좋아요한 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
-//        Long memberId = memberService.findByProviderUid(providerUid).getId();
-//        MemberSummaryResponse summaries = memberService.getLikedSummaries(memberId, page, size);
-//        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, summaries));
-//    }
-
+    /**
+     * 사용자 작성 댓글 목록 조회
+     *
+     * @param providerUid
+     * @param page
+     * @param size
+     * @return
+     */
     @Operation(summary = "사용자 작성 댓글 목록 조회", description = "인증된 사용자가 작성한 댓글 목록을 페이지네이션으로 조회합니다.")
     @GetMapping("/me/comments")
     public ResponseEntity<ApiResponse<MemberCommentResponse>> getComments(
@@ -243,6 +218,13 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, response));
     }
 
+    /**
+     * 좋아요한 요약 목록 조회
+     * @param providerUid
+     * @param page
+     * @param size
+     * @return
+     */
     @Operation(summary = "사용자 좋아요한 요약 목록 조회", description = "인증된 사용자가 좋아요한 요약 목록을 페이지네이션으로 조회합니다.")
     @GetMapping("/me/likes")
     public ResponseEntity<ApiResponse<LikedSummaryListResponse>> getLikedSummaries(
@@ -262,5 +244,39 @@ public class MemberController {
         LikedSummaryListResponse response = summaryLikeService.getLikedSummaries(providerUid, pageable);
 
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, response));
+    }
+
+    /**
+     * 사용자 본인 프로필 조회
+     * @param providerUid
+     * @return
+     */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<MemberProfileResponse>> getMyProfile(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid
+    ){
+        log.info("사용자 본인 프로필 조회 요청: providerUid={}", providerUid);
+        Long memberId = memberService.findByProviderUid(providerUid).getId();
+        MemberProfileResponse response = memberService.getMemberProfile(memberId);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));
+    }
+
+    /**
+     * 다른사용자 프로필 조회
+     * @param providerUid
+     * @param userId
+     * @return
+     */
+    @GetMapping("/me/users/{userId}")
+    public ResponseEntity<ApiResponse<MemberProfileResponse>> getMemberProfile(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @PathVariable Long userId
+    ){
+        log.info("다른 사용자 프로필 조회 요청: providerUid={}", providerUid);
+        MemberProfileResponse response = memberService.getMemberProfile(userId);
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));
+
     }
 }
