@@ -10,6 +10,9 @@ import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.Role;
 import joomidang.papersummary.member.exception.MemberDuplicateException;
 import joomidang.papersummary.member.service.MemberService;
+import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
+import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
+import joomidang.papersummary.summary.service.SummaryLikeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,17 +20,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,6 +53,9 @@ class MemberControllerTest {
 
     @Mock
     private JwtTokenProvider tokenProvider;
+
+    @Mock
+    private SummaryLikeService summaryLikeService;
 
     @Mock
     private Authentication authentication;
@@ -216,5 +227,82 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_COMMENTS.getValue()))
                 .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_COMMENTS.getMessage()));
+    }
+
+    @Test
+    @DisplayName("사용자 좋아요한 요약 목록 조회 API 성공 테스트")
+    void getLikedSummariesSuccessTest() throws Exception {
+        // Given
+        List<LikedSummaryResponse> summaries = new ArrayList<>();
+        summaries.add(new LikedSummaryResponse(
+                1L, "첫 번째 요약본", "요약 내용1", "작성자1",
+                LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+        ));
+        summaries.add(new LikedSummaryResponse(
+                2L, "두 번째 요약본", "요약 내용2", "작성자2",
+                LocalDateTime.now(), LocalDateTime.now(), 15, 8, 2
+        ));
+
+        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(summaries, 0, 1, 2L, false, false);
+
+        when(summaryLikeService.getLikedSummaries(any(), any(Pageable.class))).thenReturn(mockResponse);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/me/likes")
+                        .param("page", "1")
+                        .param("size", "10")
+                        .header("Authorization", TEST_TOKEN)
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
+                .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getMessage()))
+                .andExpect(jsonPath("$.data.summaries").isArray())
+                .andExpect(jsonPath("$.data.summaries.length()").value(2))
+                .andExpect(jsonPath("$.data.summaries[0].summaryId").value(1))
+                .andExpect(jsonPath("$.data.summaries[0].title").value("첫 번째 요약본"))
+                .andExpect(jsonPath("$.data.summaries[1].summaryId").value(2))
+                .andExpect(jsonPath("$.data.summaries[1].title").value("두 번째 요약본"))
+                .andExpect(jsonPath("$.data.currentPage").value(0))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.hasPrevious").value(false));
+    }
+
+    @Test
+    @DisplayName("사용자 좋아요한 요약 목록 페이징 테스트")
+    void getLikedSummariesPagingTest() throws Exception {
+        // Given
+        // 좋아요한 요약 목록 응답 생성 (페이지 2, 총 25개 항목)
+        List<LikedSummaryResponse> summaries = new ArrayList<>();
+        for (int i = 11; i <= 20; i++) {
+            summaries.add(new LikedSummaryResponse(
+                    (long) i, "요약본 " + i, "요약 내용 " + i, "작성자 " + i,
+                    LocalDateTime.now(), LocalDateTime.now(), 10, 5, 3
+            ));
+        }
+
+        LikedSummaryListResponse mockResponse = new LikedSummaryListResponse(
+                summaries, 1, 3, 25L, true, true
+        );
+
+        when(summaryLikeService.getLikedSummaries(any(), any(Pageable.class))).thenReturn(mockResponse);
+
+        // When & Then
+        mockMvc.perform(get("/api/users/me/likes")
+                        .param("page", "2")
+                        .param("size", "10")
+                        .header("Authorization", TEST_TOKEN)
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
+                .andExpect(jsonPath("$.message").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getMessage()))
+                .andExpect(jsonPath("$.data.summaries").isArray())
+                .andExpect(jsonPath("$.data.summaries.length()").value(10))
+                .andExpect(jsonPath("$.data.currentPage").value(1))
+                .andExpect(jsonPath("$.data.totalPages").value(3))
+                .andExpect(jsonPath("$.data.totalElements").value(25))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.hasPrevious").value(true));
     }
 }

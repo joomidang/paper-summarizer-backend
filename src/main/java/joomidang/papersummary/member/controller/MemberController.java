@@ -23,8 +23,13 @@ import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
 import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.s3.service.S3Service;
+import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
+import joomidang.papersummary.summary.service.SummaryLikeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -42,6 +47,7 @@ public class MemberController {
     private final MemberService memberService;
     private final JwtTokenProvider tokenProvider;
     private final S3Service s3Service;
+    private final SummaryLikeService summaryLikeService;
 
     /**
      * 회원가입 이후 프로필 생성
@@ -235,5 +241,26 @@ public class MemberController {
         // 응답 생성
         ProfileImageResponse response = ProfileImageResponse.from(imageUrl);
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.PROFILE_IMAGE_UPLOADED, response));
+    }
+
+    @Operation(summary = "사용자 좋아요한 요약 목록 조회", description = "인증된 사용자가 좋아요한 요약 목록을 페이지네이션으로 조회합니다.")
+    @GetMapping("/me/likes")
+    public ResponseEntity<ApiResponse<LikedSummaryListResponse>> getLikedSummaries(
+            @Parameter(hidden = true)
+            @Authenticated String providerUid,
+            @Parameter(description = "페이지 번호 (1부터 시작)")
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @Parameter(description = "페이지 크기")
+            @RequestParam(required = false, defaultValue = "10") int size
+    ){
+        log.info("좋아요한 글 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
+
+        if (page > 0) page = page - 1;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 좋아요한 요약 목록 조회
+        LikedSummaryListResponse response = summaryLikeService.getLikedSummaries(providerUid, pageable);
+
+        return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_LIKED_SUMMARIES, response));
     }
 }
