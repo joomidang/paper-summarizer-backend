@@ -268,7 +268,7 @@ public class MemberController {
      * @param userId
      * @return
      */
-    @GetMapping("/me/users/{userId}")
+    @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<MemberProfileResponse>> getMemberProfile(
             @Parameter(hidden = true)
             @Authenticated String providerUid,
