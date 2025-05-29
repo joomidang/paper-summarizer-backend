@@ -30,6 +30,7 @@ import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import joomidang.papersummary.summary.repository.SummaryStatsRepository;
+import joomidang.papersummary.tag.service.TagService;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class SummaryService {
     private final SummaryVersionService summaryVersionService;
     private final SummaryLikeService summaryLikeService;
     private final StatsEventPublisher statsEventPublisher;
+    private final TagService tagService;
 
     @Transactional
     public Long createSummaryFromS3(Long paperId, String s3Key) {
@@ -91,7 +93,7 @@ public class SummaryService {
         summaryVersionService.createDraftVersion(summary, key, request.title(), member);
 
         // 태그 저장
-        // TODO: 태그 저장 로직 구현 필요
+        tagService.attachTagsToSummary(summary, request.tags());
 
         SummaryEditResponse response = SummaryEditResponse.of(
                 summaryId,
@@ -119,6 +121,9 @@ public class SummaryService {
 
         // summary version 저장
         summaryVersionService.createPublishedVersion(summary, s3Key, request.title(), member);
+
+        // 태그 저장
+        tagService.attachTagsToSummary(summary, request.tags());
 
         // summary 테이블 업데이트
         summary.publish(
