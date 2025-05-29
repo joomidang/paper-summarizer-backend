@@ -36,10 +36,11 @@ public class Tag extends BaseTimeEntity {
 
     public static Tag create(String name) {
         return Tag.builder()
-                .name(name)
+                .name(normalizeTagName(name))
                 .usageCount(0)
                 .build();
     }
+
 
     public static boolean isValidTagName(String name) {
         if (name == null || name.trim().isEmpty()) {
@@ -65,5 +66,18 @@ public class Tag extends BaseTimeEntity {
         if (this.usageCount > 0) {
             this.usageCount--;
         }
+    }
+
+    /**
+     * 태그명 정규화 - 소문자 변환 - 앞뒤 공백 제거 - 연속된 공백을 하나로 변경
+     */
+    private static String normalizeTagName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("태그명은 비어있을 수 없습니다.");
+        }
+
+        return name.trim()
+                .toLowerCase()
+                .replaceAll("\\s+", " "); // 연속된 공백을 하나로
     }
 }
