@@ -30,6 +30,7 @@ import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import joomidang.papersummary.summary.repository.SummaryStatsRepository;
+import joomidang.papersummary.tag.service.TagService;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class SummaryService {
     private final SummaryVersionService summaryVersionService;
     private final SummaryLikeService summaryLikeService;
     private final StatsEventPublisher statsEventPublisher;
+    private final TagService tagService;
 
     @Transactional
     public Long createSummaryFromS3(Long paperId, String s3Key) {
@@ -91,7 +93,7 @@ public class SummaryService {
         summaryVersionService.createDraftVersion(summary, key, request.title(), member);
 
         // 태그 저장
-        // TODO: 태그 저장 로직 구현 필요
+        tagService.attachTagsToSummary(summary, request.tags());
 
         SummaryEditResponse response = SummaryEditResponse.of(
                 summaryId,
@@ -119,6 +121,9 @@ public class SummaryService {
 
         // summary version 저장
         summaryVersionService.createPublishedVersion(summary, s3Key, request.title(), member);
+
+        // 태그 저장
+        tagService.attachTagsToSummary(summary, request.tags());
 
         // summary 테이블 업데이트
         summary.publish(
@@ -151,6 +156,9 @@ public class SummaryService {
 
         // 모든 버전 삭제 (S3에 저장되어있는 파일도 삭제)
         summaryVersionService.deleteAllVersionBySummary(summary);
+
+        //tag 사용 횟수 감소
+        tagService.decreaseTagUsageForSummary(summary);
 
         // Summary의 S3 파일 삭제
         String s3KeyMd = summary.getS3KeyMd();
@@ -188,8 +196,7 @@ public class SummaryService {
         String markdownUrl = getMarkdownUrl(s3Key);
 
         // 태그 목록 조회
-        // TODO: 태그 조회 로직 구현 필요
-        List<String> tags = Collections.emptyList();
+        List<String> tags = tagService.getTagNamesBySummary(summaryId);
 
         // 시각 콘텐츠(figures, tables) 조회
         List<String> figures = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.FIGURE);
@@ -217,8 +224,7 @@ public class SummaryService {
         String markdownUrl = getMarkdownUrl(summary.getS3KeyMd());
 
         // 태그 목록 조회
-        // TODO: 태그 조회 로직 구현 필요
-        List<String> tags = Collections.emptyList();
+        List<String> tags = tagService.getTagNamesBySummary(summaryId);
 
         statsEventPublisher.publish(summaryId, StatsType.VIEW);
         return SummaryDetailResponse.from(summary, markdownUrl, tags);

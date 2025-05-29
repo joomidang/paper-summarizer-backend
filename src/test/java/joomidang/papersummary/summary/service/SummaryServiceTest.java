@@ -47,6 +47,7 @@ import joomidang.papersummary.summary.exception.SummaryCreationFailedException;
 import joomidang.papersummary.summary.exception.SummaryNotFoundException;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import joomidang.papersummary.summary.repository.SummaryStatsRepository;
+import joomidang.papersummary.tag.service.TagService;
 import joomidang.papersummary.visualcontent.entity.VisualContentType;
 import joomidang.papersummary.visualcontent.service.VisualContentService;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,6 +70,7 @@ public class SummaryServiceTest {
     private S3Service s3Service;
     private SummaryVersionService summaryVersionService;
     private SummaryLikeService summaryLikeService;
+    private TagService tagService;
     private StatsEventPublisher statsEventPublisher;
 
     @BeforeEach
@@ -81,6 +83,7 @@ public class SummaryServiceTest {
         s3Service = mock(S3Service.class);
         summaryVersionService = mock(SummaryVersionService.class);
         summaryLikeService = mock(SummaryLikeService.class);
+        tagService = mock(TagService.class);
         statsEventPublisher = mock(StatsEventPublisher.class);
 
         summaryService = new SummaryService(
@@ -92,7 +95,8 @@ public class SummaryServiceTest {
                 s3Service,
                 summaryVersionService,
                 summaryLikeService,
-                statsEventPublisher
+                statsEventPublisher,
+                tagService
         );
 
     }
