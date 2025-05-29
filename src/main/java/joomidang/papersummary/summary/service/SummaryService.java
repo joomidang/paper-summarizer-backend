@@ -157,6 +157,9 @@ public class SummaryService {
         // 모든 버전 삭제 (S3에 저장되어있는 파일도 삭제)
         summaryVersionService.deleteAllVersionBySummary(summary);
 
+        //tag 사용 횟수 감소
+        tagService.decreaseTagUsageForSummary(summary);
+
         // Summary의 S3 파일 삭제
         String s3KeyMd = summary.getS3KeyMd();
         if (s3KeyMd != null && !s3KeyMd.isBlank()) {

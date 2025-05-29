@@ -85,4 +85,28 @@ public class TagService {
         log.debug("요약본 태그 목록 조회 완료: summaryId={}, tagCount={}", summaryId, tagNames.size());
         return tagNames;
     }
+
+    /**
+     * 요약본 삭제 시 태그 사용 횟수 감소
+     */
+    @Transactional
+    public void decreaseTagUsageForSummary(Summary summary) {
+        log.debug("요약본 삭제로 인한 태그 사용 횟수 감소: summaryId={}", summary.getId());
+
+        List<SummaryTag> summaryTags = summaryTagRepository.findBySummaryIdWithTag(summary.getId());
+
+        for (SummaryTag summaryTag : summaryTags) {
+            Tag tag = summaryTag.getTag();
+            tag.decreaseUsageCount();
+            tagRepository.save(tag);
+
+            log.debug("태그 사용 횟수 감소: tagId={}, tagName={}, newCount={}",
+                    tag.getId(), tag.getName(), tag.getUsageCount());
+        }
+
+        // 관계 삭제
+        summaryTagRepository.deleteBySummary(summary);
+
+        log.debug("요약본 태그 관계 삭제 완료: summaryId={}", summary.getId());
+    }
 }
