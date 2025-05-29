@@ -1,6 +1,7 @@
 package joomidang.papersummary.tag.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.tag.entity.SummaryTag;
 import joomidang.papersummary.tag.entity.Tag;
@@ -68,5 +69,20 @@ public class TagService {
                     Tag newTag = Tag.create(normalizedName);
                     return tagRepository.save(newTag);
                 });
+    }
+
+    /**
+     * 요약본의 태그 목록 조회
+     */
+    public List<String> getTagNamesBySummary(Long summaryId) {
+        log.debug("요약본 태그 목록 조회: summaryId={}", summaryId);
+
+        List<SummaryTag> summaryTags = summaryTagRepository.findBySummaryIdWithTag(summaryId);
+        List<String> tagNames = summaryTags.stream()
+                .map(st -> st.getTag().getName())
+                .collect(Collectors.toList());
+
+        log.debug("요약본 태그 목록 조회 완료: summaryId={}, tagCount={}", summaryId, tagNames.size());
+        return tagNames;
     }
 }

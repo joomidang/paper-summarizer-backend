@@ -193,8 +193,7 @@ public class SummaryService {
         String markdownUrl = getMarkdownUrl(s3Key);
 
         // 태그 목록 조회
-        // TODO: 태그 조회 로직 구현 필요
-        List<String> tags = Collections.emptyList();
+        List<String> tags = tagService.getTagNamesBySummary(summaryId);
 
         // 시각 콘텐츠(figures, tables) 조회
         List<String> figures = visualContentService.findUrlsBySummaryAndType(summary, VisualContentType.FIGURE);
@@ -222,8 +221,7 @@ public class SummaryService {
         String markdownUrl = getMarkdownUrl(summary.getS3KeyMd());
 
         // 태그 목록 조회
-        // TODO: 태그 조회 로직 구현 필요
-        List<String> tags = Collections.emptyList();
+        List<String> tags = tagService.getTagNamesBySummary(summaryId);
 
         statsEventPublisher.publish(summaryId, StatsType.VIEW);
         return SummaryDetailResponse.from(summary, markdownUrl, tags);
