@@ -32,13 +32,13 @@ import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
+import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
+import joomidang.papersummary.summary.controller.response.SummaryResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.entity.SummaryStats;
@@ -750,7 +750,7 @@ public class SummaryServiceTest {
                 .thenReturn(scoreResults);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
@@ -762,7 +762,7 @@ public class SummaryServiceTest {
         assertFalse(response.hasPrevious());
 
         // 첫 번째 요약본 검증
-        PopularSummaryResponse firstSummary = response.summaries().get(0);
+        SummaryResponse firstSummary = response.summaries().get(0);
         assertEquals(1L, firstSummary.summaryId());
         assertEquals("인기 요약본 1", firstSummary.title());
         assertEquals("인기 요약본 1의 내용", firstSummary.brief());
@@ -774,7 +774,7 @@ public class SummaryServiceTest {
         assertEquals(36.0, firstSummary.popularityScore());
 
         // 두 번째 요약본 검증
-        PopularSummaryResponse secondSummary = response.summaries().get(1);
+        SummaryResponse secondSummary = response.summaries().get(1);
         assertEquals(2L, secondSummary.summaryId());
         assertEquals("인기 요약본 2", secondSummary.title());
         assertEquals(24.4, secondSummary.popularityScore());
@@ -795,7 +795,7 @@ public class SummaryServiceTest {
                 .thenReturn(emptySummariesPage);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
@@ -841,13 +841,13 @@ public class SummaryServiceTest {
                 .thenReturn(Collections.emptyList());
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
         assertEquals(1, response.summaries().size());
 
-        PopularSummaryResponse summaryResponse = response.summaries().get(0);
+        SummaryResponse summaryResponse = response.summaries().get(0);
         assertEquals(1L, summaryResponse.summaryId());
         assertEquals("점수 없는 요약본", summaryResponse.title());
         assertEquals(0.0, summaryResponse.popularityScore()); // 기본값 0.0
@@ -881,7 +881,7 @@ public class SummaryServiceTest {
                 .thenReturn(scoreResults);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
@@ -955,4 +955,324 @@ public class SummaryServiceTest {
         return summaries;
     }
 
+    @Test
+    @DisplayName("요약본 검색 성공 테스트 - 결과 있음")
+    void searchSummariesSuccess() {
+        // given
+        String searchTerm = "인공지능";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // Mock Summary 객체들 생성
+        Member mockMember = mock(Member.class);
+        when(mockMember.getName()).thenReturn("작성자");
+        when(mockMember.getProfileImage()).thenReturn("profile.jpg");
+
+        Summary mockSummary1 = mock(Summary.class);
+        when(mockSummary1.getId()).thenReturn(1L);
+        when(mockSummary1.getTitle()).thenReturn("인공지능 논문 요약");
+        when(mockSummary1.getBrief()).thenReturn("인공지능 관련 논문 요약입니다.");
+        when(mockSummary1.getMember()).thenReturn(mockMember);
+        when(mockSummary1.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary1.getViewCount()).thenReturn(100);
+        when(mockSummary1.getLikeCount()).thenReturn(20);
+        when(mockSummary1.getCommentCount()).thenReturn(5);
+
+        Summary mockSummary2 = mock(Summary.class);
+        when(mockSummary2.getId()).thenReturn(2L);
+        when(mockSummary2.getTitle()).thenReturn("딥러닝과 인공지능");
+        when(mockSummary2.getBrief()).thenReturn("딥러닝과 인공지능에 관한 요약입니다.");
+        when(mockSummary2.getMember()).thenReturn(mockMember);
+        when(mockSummary2.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary2.getViewCount()).thenReturn(80);
+        when(mockSummary2.getLikeCount()).thenReturn(15);
+        when(mockSummary2.getCommentCount()).thenReturn(3);
+
+        List<Summary> summaries = Arrays.asList(mockSummary1, mockSummary2);
+        Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 2L);
+
+        // Repository mock 설정
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Arrays.asList(
+                new Object[]{1L, 36.0},
+                new Object[]{2L, 24.4}
+        );
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(1L, 2L)))
+                .thenReturn(scoreResults);
+
+        // when
+        SummaryListResponse response = summaryService.searchSummaries(searchTerm, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(2, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(2L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 첫 번째 요약본 검증
+        SummaryResponse firstSummary = response.summaries().get(0);
+        assertEquals(1L, firstSummary.summaryId());
+        assertEquals("인공지능 논문 요약", firstSummary.title());
+        assertEquals("인공지능 관련 논문 요약입니다.", firstSummary.brief());
+        assertEquals("작성자", firstSummary.authorName());
+        assertEquals("profile.jpg", firstSummary.authorProfileImage());
+        assertEquals(100, firstSummary.viewCount());
+        assertEquals(20, firstSummary.likeCount());
+        assertEquals(5, firstSummary.commentCount());
+        assertEquals(36.0, firstSummary.popularityScore());
+
+        // 두 번째 요약본 검증
+        SummaryResponse secondSummary = response.summaries().get(1);
+        assertEquals(2L, secondSummary.summaryId());
+        assertEquals("딥러닝과 인공지능", secondSummary.title());
+        assertEquals(24.4, secondSummary.popularityScore());
+
+        // Mock 호출 검증
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(1L, 2L));
+    }
+
+    @Test
+    @DisplayName("요약본 검색 테스트 - 결과 없음")
+    void searchSummariesNoResults() {
+        // given
+        String searchTerm = "존재하지않는검색어";
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Summary> emptySummariesPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+
+        // 1단계: 원본 검색어로 정확 검색 - 결과 없음
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(emptySummariesPage);
+
+        // 2단계: 공백 제거 검색 - 결과 없음
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm.replaceAll("\\s+", "")), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(emptySummariesPage);
+
+        // 3단계: 단어별 개별 검색 - 결과 없음
+        // 단어가 하나이므로 이 단계는 실행되지 않음
+
+        // when
+        SummaryListResponse response = summaryService.searchSummaries(searchTerm, pageable);
+
+        // then
+        assertNotNull(response);
+        assertTrue(response.summaries().isEmpty());
+        assertEquals(0, response.currentPage());
+        assertEquals(0, response.totalPages());
+        assertEquals(0L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // Mock 호출 검증
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm.replaceAll("\\s+", "")), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(0)).calculatePopularityScores(any());
+    }
+
+    @Test
+    @DisplayName("요약본 검색 테스트 - 공백 제거 검색 성공")
+    void searchSummariesNoSpaceTermSuccess() {
+        // given
+        String searchTerm = "인공 지능";
+        String noSpaceTerm = "인공지능";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // 1단계: 원본 검색어로 정확 검색 - 결과 없음
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0L));
+
+        // 2단계: 공백 제거 검색 - 결과 있음
+        Member mockMember = mock(Member.class);
+        when(mockMember.getName()).thenReturn("작성자");
+        when(mockMember.getProfileImage()).thenReturn("profile.jpg");
+
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(1L);
+        when(mockSummary.getTitle()).thenReturn("인공지능 논문");
+        when(mockSummary.getBrief()).thenReturn("인공지능 관련 논문 요약입니다.");
+        when(mockSummary.getMember()).thenReturn(mockMember);
+        when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary.getViewCount()).thenReturn(100);
+        when(mockSummary.getLikeCount()).thenReturn(20);
+        when(mockSummary.getCommentCount()).thenReturn(5);
+
+        List<Summary> summaries = Collections.singletonList(mockSummary);
+        Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 1L);
+
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(noSpaceTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Collections.singletonList(new Object[]{1L, 36.0});
+        when(summaryRepository.calculatePopularityScores(Collections.singletonList(1L)))
+                .thenReturn(scoreResults);
+
+        // when
+        SummaryListResponse response = summaryService.searchSummaries(searchTerm, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(1, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(1L, response.totalElements());
+
+        // 요약본 검증
+        SummaryResponse summaryResponse = response.summaries().get(0);
+        assertEquals(1L, summaryResponse.summaryId());
+        assertEquals("인공지능 논문", summaryResponse.title());
+        assertEquals(36.0, summaryResponse.popularityScore());
+
+        // Mock 호출 검증
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(noSpaceTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).calculatePopularityScores(Collections.singletonList(1L));
+    }
+
+    @Test
+    @DisplayName("요약본 검색 테스트 - 단어별 개별 검색 성공")
+    void searchSummariesIndividualWordsSuccess() {
+        // given
+        String searchTerm = "인공 지능 논문";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // 1단계: 원본 검색어로 정확 검색 - 결과 없음
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0L));
+
+        // 2단계: 공백 제거 검색 - 결과 없음
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm.replaceAll("\\s+", "")), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0L));
+
+        // 3단계: 단어별 개별 검색 - "인공"으로 검색 결과 있음
+        Member mockMember = mock(Member.class);
+        when(mockMember.getName()).thenReturn("작성자");
+        when(mockMember.getProfileImage()).thenReturn("profile.jpg");
+
+        Summary mockSummary1 = mock(Summary.class);
+        when(mockSummary1.getId()).thenReturn(1L);
+        when(mockSummary1.getTitle()).thenReturn("인공 관련 연구");
+        when(mockSummary1.getBrief()).thenReturn("인공 관련 연구 요약입니다.");
+        when(mockSummary1.getMember()).thenReturn(mockMember);
+        when(mockSummary1.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary1.getViewCount()).thenReturn(100);
+        when(mockSummary1.getLikeCount()).thenReturn(20);
+        when(mockSummary1.getCommentCount()).thenReturn(5);
+
+        List<Summary> summaries1 = Collections.singletonList(mockSummary1);
+        Page<Summary> summariesPage1 = new PageImpl<>(summaries1, pageable, 1L);
+
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("인공"), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(summariesPage1);
+
+        // "지능"으로 검색 결과 있음
+        Summary mockSummary2 = mock(Summary.class);
+        when(mockSummary2.getId()).thenReturn(2L);
+        when(mockSummary2.getTitle()).thenReturn("지능형 시스템");
+        when(mockSummary2.getBrief()).thenReturn("지능형 시스템 요약입니다.");
+        when(mockSummary2.getMember()).thenReturn(mockMember);
+        when(mockSummary2.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary2.getViewCount()).thenReturn(80);
+        when(mockSummary2.getLikeCount()).thenReturn(15);
+        when(mockSummary2.getCommentCount()).thenReturn(3);
+
+        List<Summary> summaries2 = Collections.singletonList(mockSummary2);
+        Page<Summary> summariesPage2 = new PageImpl<>(summaries2, pageable, 1L);
+
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("지능"), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(summariesPage2);
+
+        // "논문"으로 검색 결과 있음
+        Summary mockSummary3 = mock(Summary.class);
+        when(mockSummary3.getId()).thenReturn(3L);
+        when(mockSummary3.getTitle()).thenReturn("최신 논문 리뷰");
+        when(mockSummary3.getBrief()).thenReturn("최신 논문 리뷰 요약입니다.");
+        when(mockSummary3.getMember()).thenReturn(mockMember);
+        when(mockSummary3.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary3.getViewCount()).thenReturn(60);
+        when(mockSummary3.getLikeCount()).thenReturn(10);
+        when(mockSummary3.getCommentCount()).thenReturn(2);
+
+        List<Summary> summaries3 = Collections.singletonList(mockSummary3);
+        Page<Summary> summariesPage3 = new PageImpl<>(summaries3, pageable, 1L);
+
+        when(summaryRepository.findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("논문"), eq(PublishStatus.PUBLISHED), any(Pageable.class)))
+                .thenReturn(summariesPage3);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Arrays.asList(
+                new Object[]{1L, 36.0},
+                new Object[]{2L, 24.4},
+                new Object[]{3L, 18.2}
+        );
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(1L, 2L, 3L)))
+                .thenReturn(scoreResults);
+
+        // when
+        SummaryListResponse response = summaryService.searchSummaries(searchTerm, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(3, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(3L, response.totalElements());
+
+        // 인기도 순으로 정렬되었는지 확인
+        assertEquals(1L, response.summaries().get(0).summaryId());
+        assertEquals(2L, response.summaries().get(1).summaryId());
+        assertEquals(3L, response.summaries().get(2).summaryId());
+
+        // Mock 호출 검증
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq(searchTerm.replaceAll("\\s+", "")), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("인공"), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("지능"), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                eq("논문"), eq(PublishStatus.PUBLISHED), any(Pageable.class));
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(1L, 2L, 3L));
+    }
+
+    @Test
+    @DisplayName("요약본 검색 테스트 - 유효하지 않은 검색어")
+    void searchSummariesInvalidSearchTerm() {
+        // given
+        String searchTerm = "a"; // 2글자 미만의 검색어
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when & then
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            summaryService.searchSummaries(searchTerm, pageable);
+        });
+
+        assertEquals("검색어는 최소 2자 이상이어야 합니다.", exception.getMessage());
+
+        // 검색 메서드가 호출되지 않았는지 확인
+        verify(summaryRepository, times(0)).findByTitleContainingIgnoreCaseAndPublishStatus(
+                any(), any(), any());
+    }
 }
