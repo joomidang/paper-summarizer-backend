@@ -37,6 +37,10 @@ spring:
             scope:
               - user:email
               - read:user
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
 
 jwt:
   secret: ${JWT_SECRET:5uZXzQjRhWvbeqgYF7dBtPAMrNzLDm2qSgJ8p9WXfUZoV1gxhELTuQeKM3vRDY1BfNpHyC74AZaUwVXt}

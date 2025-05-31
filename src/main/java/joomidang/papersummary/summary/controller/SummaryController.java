@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
@@ -19,12 +21,14 @@ import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
+import joomidang.papersummary.summary.service.ElasticsearchSummaryService;
 import joomidang.papersummary.summary.service.SummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,11 +45,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/summaries")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Summary", description = "논문 요약본 관련 API")
 @SecurityRequirement(name = "bearerAuth")
 public class SummaryController {
 
     private final SummaryService summaryService;
+    private final ElasticsearchSummaryService elasticsearchSummaryService;
 
     /**
      * 요약본 단건 조회
@@ -293,19 +299,19 @@ public class SummaryController {
                     required = true,
                     example = "딥러닝"
             )
-            @RequestParam("keyword") String keyword,
+            @RequestParam("keyword") @Size(min = 2, message = "검색어는 최소 2자 이상이어야 합니다.") String keyword,
 
             @Parameter(
                     description = "페이지 번호 (0부터 시작)",
                     example = "0"
             )
-            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") int page,
 
             @Parameter(
                     description = "페이지 크기 (최대 1000개)",
                     example = "20"
             )
-            @RequestParam(required = false, defaultValue = "20") int size
+            @RequestParam(required = false, defaultValue = "20") @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") int size
     ) {
         log.info("요약본 검색 요청: searchTerm={}, page={}, size={}", keyword, page, size);
 
@@ -315,7 +321,8 @@ public class SummaryController {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        SummaryListResponse response = summaryService.searchSummaries(keyword, pageable);
+        //SummaryListResponse response = summaryService.searchSummaries(keyword, pageable);
+        SummaryListResponse response = elasticsearchSummaryService.searchSummaries(keyword, pageable);
 
         log.info("요약본 검색 완료: searchTerm={}, 검색된 요약본 수={}",
                 keyword, response.summaries().size());

@@ -80,6 +80,9 @@ dependencies {
 
     // Thumbnailator - Image processing
     implementation 'net.coobird:thumbnailator:0.4.20'
+
+    // Elasticsearch
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 }
 
 tasks.named('test') {

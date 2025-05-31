@@ -71,6 +71,7 @@ public class SummaryServiceTest {
     private SummaryVersionService summaryVersionService;
     private SummaryLikeService summaryLikeService;
     private TagService tagService;
+    private ElasticsearchSummaryService elasticsearchSummaryService;
     private StatsEventPublisher statsEventPublisher;
 
     @BeforeEach
@@ -84,6 +85,7 @@ public class SummaryServiceTest {
         summaryVersionService = mock(SummaryVersionService.class);
         summaryLikeService = mock(SummaryLikeService.class);
         tagService = mock(TagService.class);
+        elasticsearchSummaryService = mock(ElasticsearchSummaryService.class);
         statsEventPublisher = mock(StatsEventPublisher.class);
 
         summaryService = new SummaryService(
@@ -95,8 +97,9 @@ public class SummaryServiceTest {
                 s3Service,
                 summaryVersionService,
                 summaryLikeService,
-                statsEventPublisher,
-                tagService
+                tagService,
+                elasticsearchSummaryService,
+                statsEventPublisher
         );
 
     }

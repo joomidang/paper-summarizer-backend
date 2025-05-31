@@ -64,8 +64,9 @@ public class SummaryService {
     private final S3Service s3Service;
     private final SummaryVersionService summaryVersionService;
     private final SummaryLikeService summaryLikeService;
-    private final StatsEventPublisher statsEventPublisher;
     private final TagService tagService;
+    private final ElasticsearchSummaryService elasticsearchSummaryService;
+    private final StatsEventPublisher statsEventPublisher;
 
     @Transactional
     public Long createSummaryFromS3(Long paperId, String s3Key) {
@@ -138,7 +139,10 @@ public class SummaryService {
                 request.brief(),
                 s3Key
         );
-        saveSummary(summary);
+        Summary savedSummary = saveSummary(summary);
+
+        // Elasticsearch에 인덱싱 추가
+        elasticsearchSummaryService.indexSummary(savedSummary);
 
         return SummaryPublishResponse.of(
                 summary.getId(),
@@ -179,6 +183,8 @@ public class SummaryService {
                 // 파일 삭제 실패해도 요약본 삭제는 계속 진행
             }
         }
+        // Elasticsearch에서 삭제
+        elasticsearchSummaryService.deleteSummary(summaryId);
 
         // 요약본 소프트 삭제
         summary.softDelete();
