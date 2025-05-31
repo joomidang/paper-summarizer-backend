@@ -47,4 +47,20 @@ public interface SummaryRepository extends JpaRepository<Summary, Long> {
     List<Object[]> calculatePopularityScores(@Param("summaryIds") List<Long> summaryIds);
 
     long countByMemberId(Long memberId);
+
+    /**
+     * 제목으로 요약본 검색 (통계 정보 포함) - 단순 LIKE 검색
+     */
+    @Query(value = "SELECT s FROM Summary s JOIN FETCH s.summaryStats st JOIN FETCH s.member m "
+            + "WHERE s.publishStatus = :publishStatus AND s.isDeleted = false "
+            + "AND LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) "
+            + "ORDER BY s.updatedAt DESC",
+            countQuery =
+                    "SELECT COUNT(s) FROM Summary s WHERE s.publishStatus = :publishStatus AND s.isDeleted = false "
+                            + "AND LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    Page<Summary> findByTitleContainingIgnoreCaseAndPublishStatus(
+            @Param("searchTerm") String searchTerm,
+            @Param("publishStatus") PublishStatus publishStatus,
+            Pageable pageable
+    );
 }

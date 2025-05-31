@@ -249,4 +249,77 @@ public class SummaryController {
         SummaryLikeResponse response = summaryService.toggleLikeSummary(providerUid, summaryId);
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_LIKE, response));
     }
+
+    @Operation(
+            summary = "요약본 검색",
+            description = "제목을 기준으로 요약본을 검색합니다. 인기도 순으로 정렬되어 반환됩니다. " +
+                    "검색어는 최소 2자 이상이어야 하며, 대소문자를 구분하지 않습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "검색 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = SummaryListResponse.class)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 검색어 (너무 짧거나 비어있음)",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = {
+                                    @ExampleObject(
+                                            name = "검색어 길이 부족",
+                                            value = "{\n" +
+                                                    "  \"code\": \"SUE-0001\",\n" +
+                                                    "  \"message\": \"검색어는 최소 2자 이상이어야 합니다.\",\n" +
+                                                    "  \"data\": null\n" +
+                                                    "}"
+                                    )
+                            }
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "서버 오류"
+            )
+    })
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<SummaryListResponse>> searchSummaries(
+            @Parameter(
+                    description = "검색어 (최소 2자 이상)",
+                    required = true,
+                    example = "딥러닝"
+            )
+            @RequestParam("keyword") String keyword,
+
+            @Parameter(
+                    description = "페이지 번호 (0부터 시작)",
+                    example = "0"
+            )
+            @RequestParam(required = false, defaultValue = "0") int page,
+
+            @Parameter(
+                    description = "페이지 크기 (최대 1000개)",
+                    example = "20"
+            )
+            @RequestParam(required = false, defaultValue = "20") int size
+    ) {
+        log.info("요약본 검색 요청: searchTerm={}, page={}, size={}", keyword, page, size);
+
+        // 페이지 크기 제한
+        if (size > 1000) {
+            size = 1000;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        SummaryListResponse response = summaryService.searchSummaries(keyword, pageable);
+
+        log.info("요약본 검색 완료: searchTerm={}, 검색된 요약본 수={}",
+                keyword, response.summaries().size());
+
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
 }
