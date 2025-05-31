@@ -3,7 +3,7 @@ package joomidang.papersummary.summary.controller.response;
 import java.time.LocalDateTime;
 import joomidang.papersummary.summary.entity.Summary;
 
-public record PopularSummaryResponse(
+public record SummaryResponse(
         Long summaryId,
         String title,
         String brief,
@@ -15,8 +15,8 @@ public record PopularSummaryResponse(
         Integer commentCount,
         Double popularityScore
 ) {
-    public static PopularSummaryResponse from(Summary summary, Double popularityScore) {
-        return new PopularSummaryResponse(
+    public static SummaryResponse from(Summary summary, Double popularityScore) {
+        return new SummaryResponse(
                 summary.getId(),
                 summary.getTitle(),
                 summary.getBrief(),

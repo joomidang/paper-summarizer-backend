@@ -12,11 +12,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
-import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
+import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
 import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
 import joomidang.papersummary.summary.service.SummaryService;
@@ -83,7 +83,7 @@ public class SummaryController {
             )
     })
     @GetMapping("/popular")
-    public ResponseEntity<ApiResponse<PopularSummaryListResponse>> getPopularSummaries(
+    public ResponseEntity<ApiResponse<SummaryListResponse>> getPopularSummaries(
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(required = false, defaultValue = "0") int page,
 
@@ -98,7 +98,7 @@ public class SummaryController {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         log.info("인기 요약본 목록 조회 완료: 조회된 요약본 수={}", response.summaries().size());
 

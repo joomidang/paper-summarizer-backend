@@ -6,16 +6,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-public record PopularSummaryListResponse(
-        List<PopularSummaryResponse> summaries,
+public record SummaryListResponse(
+        List<SummaryResponse> summaries,
         int currentPage,
         int totalPages,
         long totalElements,
         boolean hasNext,
         boolean hasPrevious
 ) {
-    public static PopularSummaryListResponse from(Page<PopularSummaryResponse> summariesPage) {
-        return new PopularSummaryListResponse(
+    public static SummaryListResponse from(Page<SummaryResponse> summariesPage) {
+        return new SummaryListResponse(
                 summariesPage.getContent(),
                 summariesPage.getNumber(),
                 summariesPage.getTotalPages(),
@@ -25,12 +25,12 @@ public record PopularSummaryListResponse(
         );
     }
 
-    public static PopularSummaryListResponse empty(Pageable pageable) {
-        Page<PopularSummaryResponse> emptyPage = new PageImpl<>(
+    public static SummaryListResponse empty(Pageable pageable) {
+        Page<SummaryResponse> emptyPage = new PageImpl<>(
                 Collections.emptyList(),
                 pageable,
                 0
         );
-        return PopularSummaryListResponse.from(emptyPage);
+        return SummaryListResponse.from(emptyPage);
     }
 }

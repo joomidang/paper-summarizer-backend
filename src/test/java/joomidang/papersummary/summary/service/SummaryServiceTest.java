@@ -32,13 +32,13 @@ import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
+import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
+import joomidang.papersummary.summary.controller.response.SummaryResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.entity.SummaryStats;
@@ -750,7 +750,7 @@ public class SummaryServiceTest {
                 .thenReturn(scoreResults);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
@@ -762,7 +762,7 @@ public class SummaryServiceTest {
         assertFalse(response.hasPrevious());
 
         // 첫 번째 요약본 검증
-        PopularSummaryResponse firstSummary = response.summaries().get(0);
+        SummaryResponse firstSummary = response.summaries().get(0);
         assertEquals(1L, firstSummary.summaryId());
         assertEquals("인기 요약본 1", firstSummary.title());
         assertEquals("인기 요약본 1의 내용", firstSummary.brief());
@@ -774,7 +774,7 @@ public class SummaryServiceTest {
         assertEquals(36.0, firstSummary.popularityScore());
 
         // 두 번째 요약본 검증
-        PopularSummaryResponse secondSummary = response.summaries().get(1);
+        SummaryResponse secondSummary = response.summaries().get(1);
         assertEquals(2L, secondSummary.summaryId());
         assertEquals("인기 요약본 2", secondSummary.title());
         assertEquals(24.4, secondSummary.popularityScore());
@@ -795,7 +795,7 @@ public class SummaryServiceTest {
                 .thenReturn(emptySummariesPage);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
@@ -841,13 +841,13 @@ public class SummaryServiceTest {
                 .thenReturn(Collections.emptyList());
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);
         assertEquals(1, response.summaries().size());
 
-        PopularSummaryResponse summaryResponse = response.summaries().get(0);
+        SummaryResponse summaryResponse = response.summaries().get(0);
         assertEquals(1L, summaryResponse.summaryId());
         assertEquals("점수 없는 요약본", summaryResponse.title());
         assertEquals(0.0, summaryResponse.popularityScore()); // 기본값 0.0
@@ -881,7 +881,7 @@ public class SummaryServiceTest {
                 .thenReturn(scoreResults);
 
         // when
-        PopularSummaryListResponse response = summaryService.getPopularSummaries(pageable);
+        SummaryListResponse response = summaryService.getPopularSummaries(pageable);
 
         // then
         assertNotNull(response);

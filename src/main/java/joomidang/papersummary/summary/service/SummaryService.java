@@ -15,13 +15,13 @@ import joomidang.papersummary.paper.service.PaperService;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryListResponse;
-import joomidang.papersummary.summary.controller.response.PopularSummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummaryDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditDetailResponse;
 import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
+import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
+import joomidang.papersummary.summary.controller.response.SummaryResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.summary.entity.SummaryStats;
@@ -285,7 +285,7 @@ public class SummaryService {
     /**
      * 인기 요약본 목록을 페이징으로 조회 가중치 기반 인기도 점수로 정렬(좋아요, 댓글, 조회수)
      */
-    public PopularSummaryListResponse getPopularSummaries(Pageable pageable) {
+    public SummaryListResponse getPopularSummaries(Pageable pageable) {
         log.debug("인기 요약본 목록 조회 시작: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
 
         // 발행된 요약본들을 인기도 순으로 조회
@@ -295,7 +295,7 @@ public class SummaryService {
         // 빈 결과 처리
         if (summariesPage.isEmpty()) {
             log.debug("조회된 인기 요약본이 없음");
-            return PopularSummaryListResponse.empty(pageable);
+            return SummaryListResponse.empty(pageable);
         }
 
         // 요약본 ID 목록 추출
@@ -307,15 +307,15 @@ public class SummaryService {
         Map<Long, Double> popularityScores = calculatePopularityScores(summaryIds);
 
         // PopularSummaryResponse로 변환
-        List<PopularSummaryResponse> popularSummaries = summariesPage.getContent().stream()
+        List<SummaryResponse> popularSummaries = summariesPage.getContent().stream()
                 .map(summary -> {
                     Double score = popularityScores.getOrDefault(summary.getId(), 0.0);
-                    return PopularSummaryResponse.from(summary, score);
+                    return SummaryResponse.from(summary, score);
                 })
                 .toList();
 
         // 페이지 정보를 포함한 응답 생성
-        Page<PopularSummaryResponse> responsePage = new PageImpl<>(
+        Page<SummaryResponse> responsePage = new PageImpl<>(
                 popularSummaries,
                 pageable,
                 summariesPage.getTotalElements()
@@ -324,7 +324,7 @@ public class SummaryService {
         log.debug("인기 요약본 목록 조회 완료: 조회된 요약본 수={}, 전체 페이지={}",
                 responsePage.getNumberOfElements(), responsePage.getTotalPages());
 
-        return PopularSummaryListResponse.from(responsePage);
+        return SummaryListResponse.from(responsePage);
     }
 
     private void validateS3Key(String s3Key) {
