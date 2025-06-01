@@ -24,6 +24,11 @@ spring:
             scope:
               - user:email
               - read:user
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URI}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
   rabbitmq:
     host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5672}

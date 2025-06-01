@@ -150,6 +150,9 @@ jobs:
             
             # MinerU 파싱 서버
             MINERU_PARSING_URL=${{secrets.MINERU_PARSING_URL}}
+            
+            # Elasticsearch
+            ELASTICSEARCH_URI=${{secrets.ELASTICSEARCH_URI}}
             # etc...
             EOF
             
