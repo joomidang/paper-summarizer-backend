@@ -40,6 +40,9 @@ public class SummaryDocument {
     @Field(type = FieldType.Date, format = {DateFormat.date_hour_minute_second, DateFormat.date})
     private LocalDateTime createdAt;
 
+    @Field(type = FieldType.Dense_Vector, dims = 384) // Hugging Face 모델 차원 수
+    private float[] embedding;
+
     @Builder
     public SummaryDocument(String id,
                            Long summaryId,
@@ -48,7 +51,8 @@ public class SummaryDocument {
                            String combinedText,
                            Integer likeCount,
                            Integer viewCount,
-                           LocalDateTime createdAt) {
+                           LocalDateTime createdAt,
+                           float[] embedding) {
         this.id = id;
         this.summaryId = summaryId;
         this.title = title;
@@ -57,5 +61,6 @@ public class SummaryDocument {
         this.likeCount = likeCount;
         this.viewCount = viewCount;
         this.createdAt = createdAt;
+        this.embedding = embedding;
     }
 }

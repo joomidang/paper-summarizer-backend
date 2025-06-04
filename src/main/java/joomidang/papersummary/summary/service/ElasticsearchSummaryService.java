@@ -2,6 +2,7 @@ package joomidang.papersummary.summary.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import joomidang.papersummary.common.embedding.EmbeddingClient;
 import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryResponse;
 import joomidang.papersummary.summary.entity.PublishStatus;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ElasticsearchSummaryService {
     private final SummaryElasticsearchRepository elasticsearchRepository;
     private final SummaryRepository summaryRepository;
+    private final EmbeddingClient embeddingClient;
     private final ElasticsearchOperations elasticsearchOperations;
 
     private static final int MIN_SEARCH_TERM_LENGTH = 2;
@@ -123,10 +125,15 @@ public class ElasticsearchSummaryService {
     public void indexSummary(Summary summary) {
         log.info("Summary 인덱싱 시작: summaryId={}", summary.getId());
 
-        // ID를 항상 문자열로 처리
         String documentId = String.valueOf(summary.getId());
+        String combinedText = summary.getTitle() + " " + summary.getBrief();
+        String embeddingInput = "passage: " + combinedText; // E5 모델용 프리픽스
 
         try {
+            List<Float> embedding = embeddingClient.embed(
+                    "intfloat/multilingual-e5-small", embeddingInput
+            );
+
             SummaryDocument document = SummaryDocument.builder()
                     .id(documentId) // 문자열 ID 사용
                     .summaryId(summary.getId())
@@ -136,6 +143,7 @@ public class ElasticsearchSummaryService {
                     .likeCount(summary.getLikeCount())
                     .viewCount(summary.getViewCount())
                     .createdAt(summary.getCreatedAt())
+                    .embedding(toFloatArray(embedding))
                     .build();
 
             elasticsearchRepository.save(document);
@@ -182,5 +190,13 @@ public class ElasticsearchSummaryService {
         if (trimmed.length() < MIN_SEARCH_TERM_LENGTH) {
             throw new IllegalArgumentException("검색어는 최소 " + MIN_SEARCH_TERM_LENGTH + "자 이상이어야 합니다.");
         }
+    }
+
+    private float[] toFloatArray(List<Float> list) {
+        float[] array = new float[list.size()];
+        for (int i = 0; i < list.size(); i++) {
+            array[i] = list.get(i);
+        }
+        return array;
     }
 }

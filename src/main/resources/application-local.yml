@@ -56,6 +56,10 @@ aws:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
 
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY}
+
 logging:
   config: classpath:logback/logback-local.xml
   level:
