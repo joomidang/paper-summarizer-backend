@@ -103,6 +103,7 @@ public class SummaryService {
         // 태그 저장
         tagService.attachTagsToSummary(summary, request.tags());
 
+        //TODO: 여기도 인덱싱 추가
         SummaryEditResponse response = SummaryEditResponse.of(
                 summaryId,
                 summary.getPublishStatus(),
@@ -142,6 +143,8 @@ public class SummaryService {
         Summary savedSummary = saveSummary(summary);
 
         // Elasticsearch에 인덱싱 추가
+        //TODO: 임시저장해서 인덱싱을 했는데 변경사항 있으면 다시 인덱싱...
+        //TODO: request.markdownContent()이거 활용해서 embedding input으로 활용하도록 변경
         elasticsearchSummaryService.indexSummary(savedSummary);
 
         return SummaryPublishResponse.of(

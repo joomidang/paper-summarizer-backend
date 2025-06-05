@@ -29,6 +29,13 @@ spring:
     connection-timeout: 5s
     socket-timeout: 30s
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:3000}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:3000}
+
   rabbitmq:
     host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5672}
@@ -72,4 +79,3 @@ springdoc:
     - /api/**
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
-

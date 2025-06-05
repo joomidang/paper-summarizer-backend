@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.summary.controller.request.SummaryEditRequest;
@@ -20,6 +21,7 @@ import joomidang.papersummary.summary.controller.response.SummaryEditResponse;
 import joomidang.papersummary.summary.controller.response.SummaryLikeResponse;
 import joomidang.papersummary.summary.controller.response.SummaryListResponse;
 import joomidang.papersummary.summary.controller.response.SummaryPublishResponse;
+import joomidang.papersummary.summary.controller.response.SummaryResponse;
 import joomidang.papersummary.summary.controller.response.SummarySuccessCode;
 import joomidang.papersummary.summary.service.ElasticsearchSummaryService;
 import joomidang.papersummary.summary.service.SummaryService;
@@ -328,5 +330,18 @@ public class SummaryController {
                 keyword, response.summaries().size());
 
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
+
+    @Operation(summary = "유사 요약 추천", description = "특정 요약을 기준으로 유사한 다른 요약들을 추천합니다.")
+    @GetMapping("/{summaryId}/recommendations")
+    public ResponseEntity<ApiResponse<List<SummaryResponse>>> recommendSimilarSummaries(
+            @Parameter(description = "기준이 될 요약 ID", example = "42")
+            @PathVariable Long summaryId,
+
+            @Parameter(description = "추천 개수", example = "5")
+            @RequestParam(defaultValue = "5") int size
+    ) {
+        List<SummaryResponse> recommendations = elasticsearchSummaryService.recommendSimilarSummaries(summaryId, size);
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, recommendations));
     }
 }
