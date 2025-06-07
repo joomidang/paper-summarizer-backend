@@ -59,6 +59,10 @@ aws:
 mineru:
   parsing-url: ${MINERU_PARSING_URL}
 
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY}
+
 logging:
   config: classpath:logback/logback-dev.xml
   level:

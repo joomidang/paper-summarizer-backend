@@ -153,6 +153,13 @@ jobs:
             
             # Elasticsearch
             ELASTICSEARCH_URI=${{secrets.ELASTICSEARCH_URI}}
+            
+            # HuggingFace API
+            HUGGINGFACE_API_KEY=${{secrets.HUGGINGFACE_API_KEY}}
+            
+            # Redis
+            REDIS_HOST=${{secrets.REDIS_HOST}}
+            REDIS_PORT=${{secrets.REDIS_PORT}}
             # etc...
             EOF
             
