@@ -1,6 +1,6 @@
 package joomidang.papersummary.common.config.elasticsearch;
 
-import joomidang.papersummary.summary.service.ElasticsearchSummaryService;
+import joomidang.papersummary.common.config.elasticsearch.service.ElasticsearchSummaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -8,8 +8,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Elasticsearch 초기화 및 인덱싱을 담당하는 컴포넌트
- * 애플리케이션 시작 후 모든 요약본을 재인덱싱합니다.
+ * Elasticsearch 초기화 및 인덱싱을 담당하는 컴포넌트 애플리케이션 시작 후 모든 요약본을 재인덱싱합니다.
  */
 @Slf4j
 @Component

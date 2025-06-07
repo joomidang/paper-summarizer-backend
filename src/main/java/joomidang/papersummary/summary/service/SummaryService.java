@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import joomidang.papersummary.common.config.elasticsearch.service.ElasticsearchSummaryService;
 import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.common.config.rabbitmq.StatsType;
 import joomidang.papersummary.member.entity.Member;
@@ -142,10 +143,9 @@ public class SummaryService {
         );
         Summary savedSummary = saveSummary(summary);
 
-        // Elasticsearch에 인덱싱 추가
-        //TODO: 임시저장해서 인덱싱을 했는데 변경사항 있으면 다시 인덱싱...
-        //TODO: request.markdownContent()이거 활용해서 embedding input으로 활용하도록 변경
-        elasticsearchSummaryService.indexSummary(savedSummary);
+        // Elasticsearch에 인덱싱 추가 - 마크다운 내용을 함께 전달하여 섹션별 청킹 및 임베딩
+        // indexSummary 내부에서 선택적 캐시 무효화 수행
+        elasticsearchSummaryService.indexSummary(savedSummary, request.markdownContent());
 
         return SummaryPublishResponse.of(
                 summary.getId(),

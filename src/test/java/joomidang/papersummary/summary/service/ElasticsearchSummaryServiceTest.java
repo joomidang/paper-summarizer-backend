@@ -2,27 +2,20 @@ package joomidang.papersummary.summary.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
+import joomidang.papersummary.common.config.elasticsearch.entiy.SummaryDocument;
+import joomidang.papersummary.common.config.elasticsearch.repository.SummaryElasticsearchRepository;
+import joomidang.papersummary.common.config.elasticsearch.service.ElasticsearchSummaryService;
 import joomidang.papersummary.common.embedding.EmbeddingClient;
 import joomidang.papersummary.summary.controller.response.SummaryListResponse;
-import joomidang.papersummary.summary.controller.response.SummaryResponse;
-import joomidang.papersummary.summary.entity.SummaryDocument;
-import joomidang.papersummary.summary.repository.SummaryElasticsearchRepository;
 import joomidang.papersummary.summary.repository.SummaryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,8 +31,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 /**
- * ElasticsearchSummaryService 테스트 - 모킹 방식으로 변경
- * 실제 Elasticsearch 인스턴스에 의존하지 않고 모킹을 통해 테스트
+ * ElasticsearchSummaryService 테스트 - 모킹 방식으로 변경 실제 Elasticsearch 인스턴스에 의존하지 않고 모킹을 통해 테스트
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -67,7 +59,7 @@ public class ElasticsearchSummaryServiceTest {
     void setUp() {
         // 테스트 데이터 생성
         document1 = SummaryDocument.builder()
-                .id("1")
+                .id(1L)
                 .summaryId(1L)
                 .title("인공지능 논문 요약")
                 .brief("인공지능 관련 논문 요약입니다.")
@@ -78,7 +70,7 @@ public class ElasticsearchSummaryServiceTest {
                 .build();
 
         document2 = SummaryDocument.builder()
-                .id("2")
+                .id(2L)
                 .summaryId(2L)
                 .title("딥러닝과 인공지능")
                 .brief("딥러닝과 인공지능에 관한 요약입니다.")
@@ -98,7 +90,8 @@ public class ElasticsearchSummaryServiceTest {
 
         // Mock the repository search method
         List<SummaryDocument> documents = Arrays.asList(document1, document2);
-        Page<SummaryDocument> mockPage = new org.springframework.data.domain.PageImpl<>(documents, pageable, documents.size());
+        Page<SummaryDocument> mockPage = new org.springframework.data.domain.PageImpl<>(documents, pageable,
+                documents.size());
 
         when(elasticsearchRepository.findByCombinedTextContainingIgnoreCase(eq(searchTerm), eq(pageable)))
                 .thenReturn(mockPage);
@@ -139,13 +132,13 @@ public class ElasticsearchSummaryServiceTest {
     @DisplayName("Elasticsearch 문서 조회 테스트")
     void getSummaryDocumentTest() {
         // given
-        String documentId = "1";
+        Long documentId = 1L;
 
         // Mock repository to return the document
-        when(elasticsearchRepository.findById(documentId)).thenReturn(Optional.of(document1));
+        when(elasticsearchRepository.findById(String.valueOf(documentId))).thenReturn(Optional.of(document1));
 
         // when
-        Optional<SummaryDocument> result = elasticsearchRepository.findById(documentId);
+        Optional<SummaryDocument> result = elasticsearchRepository.findById(String.valueOf(documentId));
 
         // then
         assertNotNull(result, "조회 결과가 null입니다.");
