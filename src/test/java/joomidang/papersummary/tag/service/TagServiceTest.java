@@ -20,6 +20,7 @@ import joomidang.papersummary.paper.entity.Paper;
 import joomidang.papersummary.paper.entity.Status;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.tag.controller.response.TagResponse;
 import joomidang.papersummary.tag.entity.SummaryTag;
 import joomidang.papersummary.tag.entity.Tag;
 import joomidang.papersummary.tag.repository.SummaryTagRepository;
@@ -410,6 +411,73 @@ class TagServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("getPopularTags 메서드는")
+    class GetPopularTagsTest {
+
+        @Test
+        @DisplayName("인기 태그 목록을 사용 횟수 내림차순으로 조회한다")
+        void shouldReturnPopularTagsOrderedByUsageCount() {
+            // given
+            int limit = 3;
+            Pageable pageable = PageRequest.of(0, limit);
+
+            Tag tag1 = createTestTag(1L, "java", 10);
+            Tag tag2 = createTestTag(2L, "spring", 7);
+            Tag tag3 = createTestTag(3L, "jpa", 5);
+            List<Tag> popularTags = Arrays.asList(tag1, tag2, tag3);
+
+            given(tagRepository.findAllByOrderByUsageCountDesc(pageable)).willReturn(popularTags);
+
+            // when
+            List<TagResponse> result = tagService.getPopularTags(limit);
+
+            // then
+            assertThat(result).hasSize(3);
+
+            // 태그 응답 검증
+            assertTagResponse(result.get(0), "java", 10);
+            assertTagResponse(result.get(1), "spring", 7);
+            assertTagResponse(result.get(2), "jpa", 5);
+
+            then(tagRepository).should().findAllByOrderByUsageCountDesc(pageable);
+        }
+
+        @Test
+        @DisplayName("태그가 없으면 빈 목록을 반환한다")
+        void shouldReturnEmptyListWhenNoTagsExist() {
+            // given
+            int limit = 10;
+            Pageable pageable = PageRequest.of(0, limit);
+
+            given(tagRepository.findAllByOrderByUsageCountDesc(pageable)).willReturn(Collections.emptyList());
+
+            // when
+            List<TagResponse> result = tagService.getPopularTags(limit);
+
+            // then
+            assertThat(result).isEmpty();
+            then(tagRepository).should().findAllByOrderByUsageCountDesc(pageable);
+        }
+
+        @Test
+        @DisplayName("limit 값이 작으면 빈 목록을 반환한다")
+        void shouldReturnEmptyListWhenLimitIsSmall() {
+            // given
+            int limit = 1; // 최소 1이어야 함 (PageRequest 요구사항)
+            Pageable pageable = PageRequest.of(0, limit);
+
+            given(tagRepository.findAllByOrderByUsageCountDesc(pageable)).willReturn(Collections.emptyList());
+
+            // when
+            List<TagResponse> result = tagService.getPopularTags(limit);
+
+            // then
+            assertThat(result).isEmpty();
+            then(tagRepository).should().findAllByOrderByUsageCountDesc(pageable);
+        }
+    }
+
     // 테스트 헬퍼 메서드들
     private Summary createTestSummary() {
         Member member = Member.builder()
@@ -456,5 +524,14 @@ class TagServiceTest {
                 .summary(summary)
                 .tag(tag)
                 .build();
+    }
+
+    /**
+     * TagResponse 객체의 필드 값을 검증하는 헬퍼 메서드
+     */
+    private void assertTagResponse(TagResponse response, String expectedName, int expectedCount) {
+        assertThat(response).isNotNull();
+        assertThat(response.toString()).contains(expectedName);
+        assertThat(response.toString()).contains(String.valueOf(expectedCount));
     }
 }

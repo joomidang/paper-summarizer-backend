@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
+import joomidang.papersummary.tag.controller.response.TagResponse;
 import joomidang.papersummary.tag.entity.SummaryTag;
 import joomidang.papersummary.tag.entity.Tag;
 import joomidang.papersummary.tag.repository.SummaryTagRepository;
@@ -11,6 +12,7 @@ import joomidang.papersummary.tag.repository.TagRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -131,5 +133,22 @@ public class TagService {
                 tagName, summaries.getContent().size());
 
         return summaries;
+    }
+
+    /**
+     * 많이 사용된 태그 순으로 조회
+     */
+    public List<TagResponse> getPopularTags(int limit) {
+        log.debug("인기 태그 목록 조회 시작: limit={}", limit);
+
+        Pageable pageable = PageRequest.of(0, limit);
+        List<Tag> popularTags = tagRepository.findAllByOrderByUsageCountDesc(pageable);
+
+        List<TagResponse> tagResponses = popularTags.stream()
+                .map(tag -> new TagResponse(tag.getName(), tag.getUsageCount()))
+                .collect(Collectors.toList());
+
+        log.debug("인기 태그 목록 조회 완료: 조회된 태그 수={}", tagResponses.size());
+        return tagResponses;
     }
 }
