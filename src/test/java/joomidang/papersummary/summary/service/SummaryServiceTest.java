@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import joomidang.papersummary.common.config.elasticsearch.service.ElasticsearchSummaryService;
 import joomidang.papersummary.common.config.rabbitmq.StatsEventPublisher;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.exception.MemberNotFoundException;

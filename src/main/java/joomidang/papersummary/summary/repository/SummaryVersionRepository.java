@@ -8,7 +8,9 @@ import joomidang.papersummary.summary.entity.VersionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public interface SummaryVersionRepository extends JpaRepository<SummaryVersion, Long> {
     @Query("SELECT MAX(v.revisionNumber) FROM SummaryVersion v WHERE v.summary.id = :summaryId")
     Optional<Integer> findMaxRevision(@Param("summaryId") Long summaryId);

@@ -1,6 +1,6 @@
-package joomidang.papersummary.summary.repository;
+package joomidang.papersummary.common.config.elasticsearch.repository;
 
-import joomidang.papersummary.summary.entity.SummaryDocument;
+import joomidang.papersummary.common.config.elasticsearch.entiy.SummaryDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;

@@ -42,6 +42,14 @@ spring:
     connection-timeout: 5s
     socket-timeout: 30s
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000
+      connect-timeout: 3000
+
+
 jwt:
   secret: ${JWT_SECRET:5uZXzQjRhWvbeqgYF7dBtPAMrNzLDm2qSgJ8p9WXfUZoV1gxhELTuQeKM3vRDY1BfNpHyC74AZaUwVXt}
   access-token-validity-in-seconds: 86400 # 24 hours
@@ -55,6 +63,10 @@ aws:
   credentials:
     access-key: ${AWS_ACCESS_KEY}
     secret-key: ${AWS_SECRET_KEY}
+
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY}
 
 logging:
   config: classpath:logback/logback-local.xml

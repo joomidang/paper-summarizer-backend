@@ -1,0 +1,6 @@
+spring:
+  data:
+    redis:
+      enabled: false
+  cache:
+    type: simple
