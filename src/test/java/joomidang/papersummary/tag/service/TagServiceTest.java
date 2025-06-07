@@ -3,6 +3,7 @@ package joomidang.papersummary.tag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -30,6 +31,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TagService 단위 테스트")
@@ -305,6 +310,103 @@ class TagServiceTest {
             // then
             then(tagRepository).should(never()).save(any(Tag.class));
             then(summaryTagRepository).should().deleteBySummary(summary);
+        }
+    }
+
+    @Nested
+    @DisplayName("getSummariesByTag 메서드는")
+    class GetSummariesByTagTest {
+
+        @Test
+        @DisplayName("태그명으로 요약본 목록을 정상적으로 조회한다")
+        void shouldReturnSummariesByTagName() {
+            // given
+            String tagName = "java";
+            String normalizedTagName = "java";
+            Pageable pageable = PageRequest.of(0, 10);
+
+            Summary summary1 = createTestSummary();
+            Summary summary2 = Summary.builder()
+                    .id(2L)
+                    .title("Another Test Summary")
+                    .brief("Another test brief")
+                    .s3KeyMd("test/summary2.md")
+                    .publishStatus(PublishStatus.PUBLISHED)
+                    .member(summary1.getMember())
+                    .paper(summary1.getPaper())
+                    .build();
+
+            List<Summary> summaries = Arrays.asList(summary1, summary2);
+            Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 2L);
+
+            given(summaryTagRepository.findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                    .willReturn(summariesPage);
+
+            // when
+            Page<Summary> result = tagService.getSummariesByTag(tagName, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getContent()).containsExactly(summary1, summary2);
+            assertThat(result.getTotalElements()).isEqualTo(2L);
+
+            then(summaryTagRepository).should().findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("태그명을 정규화하여 조회한다")
+        void shouldNormalizeTagNameBeforeQuery() {
+            // given
+            String tagName = "  JAVA  ";
+            String normalizedTagName = "java";
+            Pageable pageable = PageRequest.of(0, 10);
+
+            List<Summary> emptyList = Collections.emptyList();
+            Page<Summary> emptyPage = new PageImpl<>(emptyList, pageable, 0L);
+
+            given(summaryTagRepository.findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                    .willReturn(emptyPage);
+
+            // when
+            Page<Summary> result = tagService.getSummariesByTag(tagName, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+
+            then(summaryTagRepository).should().findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("태그에 해당하는 요약본이 없으면 빈 페이지를 반환한다")
+        void shouldReturnEmptyPageWhenNoSummariesFound() {
+            // given
+            String tagName = "nonexistent";
+            String normalizedTagName = "nonexistent";
+            Pageable pageable = PageRequest.of(0, 10);
+
+            List<Summary> emptyList = Collections.emptyList();
+            Page<Summary> emptyPage = new PageImpl<>(emptyList, pageable, 0L);
+
+            given(summaryTagRepository.findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable)))
+                    .willReturn(emptyPage);
+
+            // when
+            Page<Summary> result = tagService.getSummariesByTag(tagName, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
+
+            then(summaryTagRepository).should().findSummariesByTagName(
+                    eq(normalizedTagName), eq(PublishStatus.PUBLISHED), eq(pageable));
         }
     }
 

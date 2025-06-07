@@ -344,4 +344,44 @@ public class SummaryController {
         List<SummaryResponse> recommendations = elasticsearchSummaryService.recommendSimilarSummaries(summaryId, size);
         return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, recommendations));
     }
+
+    @Operation(
+            summary = "태그별 요약본 목록 조회",
+            description = "특정 태그를 가진 요약본 목록을 조회합니다. 페이지네이션과 정렬을 지원합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "태그별 요약본 목록 조회 성공"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "서버 오류"
+            )
+    })
+    @GetMapping("/tag")
+    public ResponseEntity<ApiResponse<SummaryListResponse>> getSummariesByTag(
+            @Parameter(description = "태그명", required = true, example = "딥러닝")
+            @RequestParam(required = true) String tag,
+
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(required = false, defaultValue = "0") int page,
+
+            @Parameter(description = "페이지 크기 (기본값: 20)", example = "20")
+            @RequestParam(required = false, defaultValue = "20") int size
+    ) {
+        log.info("태그별 요약본 목록 조회 요청: tag={}, page={}, size={}", tag, page, size);
+
+        // 페이지 크기 제한
+        if (size > 100) {
+            size = 100;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        SummaryListResponse response = summaryService.getSummariesByTag(tag, pageable);
+
+        log.info("태그별 요약본 목록 조회 완료: tag={}, 조회된 요약본 수={}", tag, response.summaries().size());
+
+        return ResponseEntity.ok(ApiResponse.successWithData(SummarySuccessCode.SUMMARY_FETCHED, response));
+    }
 }

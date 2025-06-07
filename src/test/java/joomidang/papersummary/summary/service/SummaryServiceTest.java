@@ -1279,4 +1279,155 @@ public class SummaryServiceTest {
         verify(summaryRepository, times(0)).findByTitleContainingIgnoreCaseAndPublishStatus(
                 any(), any(), any());
     }
+
+    @Test
+    @DisplayName("태그별 요약본 목록 조회 성공 테스트")
+    void getSummariesByTagSuccess() {
+        // given
+        String tagName = "딥러닝";
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // Mock Summary 객체들 생성
+        Member mockMember1 = mock(Member.class);
+        when(mockMember1.getName()).thenReturn("작성자1");
+        when(mockMember1.getProfileImage()).thenReturn("profile1.jpg");
+
+        Member mockMember2 = mock(Member.class);
+        when(mockMember2.getName()).thenReturn("작성자2");
+        when(mockMember2.getProfileImage()).thenReturn("profile2.jpg");
+
+        Summary mockSummary1 = mock(Summary.class);
+        when(mockSummary1.getId()).thenReturn(1L);
+        when(mockSummary1.getTitle()).thenReturn("딥러닝 요약본 1");
+        when(mockSummary1.getBrief()).thenReturn("딥러닝 요약본 1의 내용");
+        when(mockSummary1.getMember()).thenReturn(mockMember1);
+        when(mockSummary1.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary1.getViewCount()).thenReturn(100);
+        when(mockSummary1.getLikeCount()).thenReturn(20);
+        when(mockSummary1.getCommentCount()).thenReturn(5);
+
+        Summary mockSummary2 = mock(Summary.class);
+        when(mockSummary2.getId()).thenReturn(2L);
+        when(mockSummary2.getTitle()).thenReturn("딥러닝 요약본 2");
+        when(mockSummary2.getBrief()).thenReturn("딥러닝 요약본 2의 내용");
+        when(mockSummary2.getMember()).thenReturn(mockMember2);
+        when(mockSummary2.getUpdatedAt()).thenReturn(LocalDateTime.now());
+        when(mockSummary2.getViewCount()).thenReturn(80);
+        when(mockSummary2.getLikeCount()).thenReturn(15);
+        when(mockSummary2.getCommentCount()).thenReturn(3);
+
+        List<Summary> summaries = Arrays.asList(mockSummary1, mockSummary2);
+        Page<Summary> summariesPage = new PageImpl<>(summaries, pageable, 2L);
+
+        // TagService mock 설정
+        when(tagService.getSummariesByTag(tagName, pageable)).thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Arrays.asList(
+                new Object[]{1L, 36.0}, // summary1: 20*0.5 + 5*0.3 + 100*0.2 = 10 + 1.5 + 20 = 31.5
+                new Object[]{2L, 24.4}  // summary2: 15*0.5 + 3*0.3 + 80*0.2 = 7.5 + 0.9 + 16 = 24.4
+        );
+        when(summaryRepository.calculatePopularityScores(Arrays.asList(1L, 2L)))
+                .thenReturn(scoreResults);
+
+        // when
+        SummaryListResponse response = summaryService.getSummariesByTag(tagName, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(2, response.summaries().size());
+        assertEquals(0, response.currentPage());
+        assertEquals(1, response.totalPages());
+        assertEquals(2L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 첫 번째 요약본 검증
+        SummaryResponse firstSummary = response.summaries().get(0);
+        assertEquals(1L, firstSummary.summaryId());
+        assertEquals("딥러닝 요약본 1", firstSummary.title());
+        assertEquals("딥러닝 요약본 1의 내용", firstSummary.brief());
+        assertEquals("작성자1", firstSummary.authorName());
+        assertEquals("profile1.jpg", firstSummary.authorProfileImage());
+        assertEquals(100, firstSummary.viewCount());
+        assertEquals(20, firstSummary.likeCount());
+        assertEquals(5, firstSummary.commentCount());
+        assertEquals(36.0, firstSummary.popularityScore());
+
+        // 두 번째 요약본 검증
+        SummaryResponse secondSummary = response.summaries().get(1);
+        assertEquals(2L, secondSummary.summaryId());
+        assertEquals("딥러닝 요약본 2", secondSummary.title());
+        assertEquals(24.4, secondSummary.popularityScore());
+
+        // Mock 호출 검증
+        verify(tagService, times(1)).getSummariesByTag(tagName, pageable);
+        verify(summaryRepository, times(1)).calculatePopularityScores(Arrays.asList(1L, 2L));
+    }
+
+    @Test
+    @DisplayName("태그별 요약본 목록 조회 시 빈 결과 테스트")
+    void getSummariesByTagEmpty() {
+        // given
+        String tagName = "존재하지않는태그";
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Summary> emptySummariesPage = new PageImpl<>(Collections.emptyList(), pageable, 0L);
+
+        when(tagService.getSummariesByTag(tagName, pageable))
+                .thenReturn(emptySummariesPage);
+
+        // when
+        SummaryListResponse response = summaryService.getSummariesByTag(tagName, pageable);
+
+        // then
+        assertNotNull(response);
+        assertTrue(response.summaries().isEmpty());
+        assertEquals(0, response.currentPage());
+        assertEquals(0, response.totalPages());
+        assertEquals(0L, response.totalElements());
+        assertFalse(response.hasNext());
+        assertFalse(response.hasPrevious());
+
+        // 빈 결과일 때는 인기도 점수 계산 호출되지 않음
+        verify(tagService, times(1)).getSummariesByTag(tagName, pageable);
+        verify(summaryRepository, times(0)).calculatePopularityScores(any());
+    }
+
+    @Test
+    @DisplayName("태그별 요약본 목록 조회 시 페이지 크기 제한 테스트")
+    void getSummariesByTagPageSizeLimit() {
+        // given
+        String tagName = "딥러닝";
+        Pageable pageable = PageRequest.of(0, 150); // 페이지 크기 제한(100) 초과
+        Pageable limitedPageable = PageRequest.of(0, 100); // 제한된 페이지 크기
+
+        // Mock Summary 객체 생성
+        Summary mockSummary = mock(Summary.class);
+        when(mockSummary.getId()).thenReturn(1L);
+        Member mockMember = mock(Member.class);
+        when(mockMember.getName()).thenReturn("작성자");
+        when(mockSummary.getMember()).thenReturn(mockMember);
+
+        List<Summary> summaries = Collections.singletonList(mockSummary);
+        Page<Summary> summariesPage = new PageImpl<>(summaries, limitedPageable, 1L);
+
+        // TagService mock 설정 - 제한된 페이지 크기로 호출되는지 확인
+        when(tagService.getSummariesByTag(tagName, limitedPageable)).thenReturn(summariesPage);
+
+        // 인기도 점수 계산 결과 mock 설정
+        List<Object[]> scoreResults = Collections.singletonList(new Object[]{1L, 10.0});
+        when(summaryRepository.calculatePopularityScores(Collections.singletonList(1L)))
+                .thenReturn(scoreResults);
+
+        // when
+        SummaryListResponse response = summaryService.getSummariesByTag(tagName, pageable);
+
+        // then
+        assertNotNull(response);
+        assertEquals(1, response.summaries().size());
+
+        // 페이지 크기가 제한되었는지 확인
+        verify(tagService, times(1)).getSummariesByTag(tagName, limitedPageable);
+        verify(summaryRepository, times(1)).calculatePopularityScores(Collections.singletonList(1L));
+    }
 }

@@ -2,6 +2,7 @@ package joomidang.papersummary.tag.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import joomidang.papersummary.summary.entity.PublishStatus;
 import joomidang.papersummary.summary.entity.Summary;
 import joomidang.papersummary.tag.entity.SummaryTag;
 import joomidang.papersummary.tag.entity.Tag;
@@ -9,6 +10,8 @@ import joomidang.papersummary.tag.repository.SummaryTagRepository;
 import joomidang.papersummary.tag.repository.TagRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -108,5 +111,25 @@ public class TagService {
         summaryTagRepository.deleteBySummary(summary);
 
         log.debug("요약본 태그 관계 삭제 완료: summaryId={}", summary.getId());
+    }
+
+    /**
+     * 특정 태그를 가진 요약본 목록 조회 (페이징, 정렬 지원)
+     */
+    public Page<Summary> getSummariesByTag(String tagName, Pageable pageable) {
+        log.debug("태그별 요약본 목록 조회 시작: tagName={}, page={}, size={}",
+                tagName, pageable.getPageNumber(), pageable.getPageSize());
+
+        // 태그명 정규화
+        String normalizedTagName = tagName.trim().toLowerCase().replaceAll("\\s+", " ");
+
+        // 발행된 요약본만 조회
+        Page<Summary> summaries = summaryTagRepository.findSummariesByTagName(
+                normalizedTagName, PublishStatus.PUBLISHED, pageable);
+
+        log.debug("태그별 요약본 목록 조회 완료: tagName={}, 조회된 요약본 수={}",
+                tagName, summaries.getContent().size());
+
+        return summaries;
     }
 }

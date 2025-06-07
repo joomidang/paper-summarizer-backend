@@ -700,4 +700,54 @@ public class SummaryService {
 
         return popularityScores;
     }
+
+    /**
+     * 태그별 요약본 목록 조회 (페이징, 정렬 지원)
+     */
+    public SummaryListResponse getSummariesByTag(String tagName, Pageable pageable) {
+        log.debug("태그별 요약본 목록 조회 시작: tagName={}, page={}, size={}",
+                tagName, pageable.getPageNumber(), pageable.getPageSize());
+
+        // 페이지 크기 제한
+        if (pageable.getPageSize() > 100) {
+            pageable = PageRequest.of(pageable.getPageNumber(), 100, pageable.getSort());
+        }
+
+        // 태그별 요약본 조회
+        Page<Summary> summariesPage = tagService.getSummariesByTag(tagName, pageable);
+
+        // 빈 결과 처리
+        if (summariesPage.isEmpty()) {
+            log.debug("조회된 태그별 요약본이 없음: tagName={}", tagName);
+            return SummaryListResponse.empty(pageable);
+        }
+
+        // 요약본 ID 목록 추출
+        List<Long> summaryIds = summariesPage.getContent().stream()
+                .map(Summary::getId)
+                .toList();
+
+        // 인기도 점수 계산
+        Map<Long, Double> popularityScores = calculatePopularityScores(summaryIds);
+
+        // SummaryResponse로 변환
+        List<SummaryResponse> summaries = summariesPage.getContent().stream()
+                .map(summary -> {
+                    Double score = popularityScores.getOrDefault(summary.getId(), 0.0);
+                    return SummaryResponse.from(summary, score);
+                })
+                .toList();
+
+        // 페이지 정보를 포함한 응답 생성
+        Page<SummaryResponse> responsePage = new PageImpl<>(
+                summaries,
+                pageable,
+                summariesPage.getTotalElements()
+        );
+
+        log.debug("태그별 요약본 목록 조회 완료: tagName={}, 조회된 요약본 수={}, 전체 페이지={}",
+                tagName, responsePage.getNumberOfElements(), responsePage.getTotalPages());
+
+        return SummaryListResponse.from(responsePage);
+    }
 }
