@@ -436,9 +436,12 @@ public class SummaryServiceTest {
         //given
         Long summaryId = 1L;
         Summary mockSummary = mock(Summary.class);
+        Member mockMember = mock(Member.class);
         when(mockSummary.getId()).thenReturn(summaryId);
         when(mockSummary.getPublishStatus()).thenReturn(PublishStatus.PUBLISHED);
         when(mockSummary.getS3KeyMd()).thenReturn("test-key.md");
+        when(mockSummary.getMember()).thenReturn(mockMember);
+        when(mockMember.getName()).thenReturn("test-name");
         when(mockSummary.getUpdatedAt()).thenReturn(LocalDateTime.now());
         when(mockSummary.getViewCount()).thenReturn(10);
         when(mockSummary.getLikeCount()).thenReturn(5);
