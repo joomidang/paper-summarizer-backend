@@ -3,7 +3,6 @@ package joomidang.papersummary.member.service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import joomidang.papersummary.comment.entity.Comment;
 import joomidang.papersummary.comment.repository.CommentRepository;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
@@ -31,20 +30,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 회원(Member) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
- * 회원 저장, 수정, 탈퇴, 조회(Provider 기반) 등의 주요 기능을 제공합니다.
+ * 회원(Member) 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. 회원 저장, 수정, 탈퇴, 조회(Provider 기반) 등의 주요 기능을 제공합니다.
  */
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 @Service
 public class MemberService {
-    /** 회원 엔티티에 대한 JPA 리포지토리 */
+    /**
+     * 회원 엔티티에 대한 JPA 리포지토리
+     */
     private final MemberRepository memberRepository;
     private final MemberInterestRepository memberInterestRepository;
     private final SummaryRepository summaryRepository;
     private final CommentRepository commentRepository;
     private final SummaryLikeRepository summaryLikeRepository;
+
     /**
      * 회원 정보 저장
      *
@@ -105,7 +106,7 @@ public class MemberService {
     /**
      * 인증 제공자와 제공자 UID로 회원 조회
      *
-     * @param provider 인증 제공자(LOCAL, KAKAO, GOOGLE, etc)
+     * @param provider    인증 제공자(LOCAL, KAKAO, GOOGLE, etc)
      * @param providerUid 제공자 별 회원 고유 식별자
      * @return 찾은 회원(Optional)
      */
@@ -129,7 +130,7 @@ public class MemberService {
      * 회원 프로필 정보 생성
      *
      * @param memberId 프로필을 생성할 회원 ID
-     * @param request 생성할 프로필 정보
+     * @param request  생성할 프로필 정보
      * @return 생성된 회원 객체
      * @throws MemberNotFoundException 회원이 없을 때 발생
      */
@@ -185,6 +186,7 @@ public class MemberService {
             }
         }
     }
+
     public void validateUsernameDuplicate(String username, Long memberId) {
         checkUsernameDuplicate(username, memberId);
     }
@@ -193,7 +195,7 @@ public class MemberService {
      * 회원 프로필 정보 수정
      *
      * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
-     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @param request     수정할 프로필 정보 (선택적 필드)
      * @return 수정된 회원 객체
      * @throws MemberNotFoundException 회원이 없을 때 발생
      */
@@ -213,7 +215,8 @@ public class MemberService {
 
         // 프로필 정보 업데이트 (제공된 필드만)
         String newUsername = request.getUsername() != null ? request.getUsername() : member.getName();
-        String newProfileImageUrl = request.getProfileImageUrl() != null ? request.getProfileImageUrl() : member.getProfileImage();
+        String newProfileImageUrl =
+                request.getProfileImageUrl() != null ? request.getProfileImageUrl() : member.getProfileImage();
         member.updateProfile(newUsername, newProfileImageUrl);
         log.info("프로필 정보 업데이트: username={}, profileImageUrl={}", newUsername, newProfileImageUrl);
 
@@ -257,15 +260,17 @@ public class MemberService {
      * 회원이 작성한 요약 목록을 페이지네이션으로 조회
      *
      * @param memberId 요약을 조회할 회원의 고유 식별자
-     * @param page 페이지 번호 (0부터 시작)
-     * @param size 페이지 크기
+     * @param page     페이지 번호 (0부터 시작)
+     * @param size     페이지 크기
      * @return 페이지네이션된 회원의 요약 목록
      */
     @Transactional
     public MemberSummaryResponse getSummaries(final Long memberId, int page, int size) {
         log.debug("회원 요약 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
 
-        if (page > 0) page = page - 1;
+        if (page > 0) {
+            page = page - 1;
+        }
 
         // 기본 정렬: 생성일 기준 내림차순 (최신순)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -285,10 +290,12 @@ public class MemberService {
     }
 
     @Transactional
-    public MemberCommentResponse getComments(final Long memberId, int page, int size){
+    public MemberCommentResponse getComments(final Long memberId, int page, int size) {
         log.debug("내 댓글 목록 조회 시작: memberId={}, page={}, size={}", memberId, page, size);
 
-        if (page > 0) page = page - 1;
+        if (page > 0) {
+            page = page - 1;
+        }
 
         // 기본 정렬: 생성일 기준 내림차순 (최신순)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -297,7 +304,7 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberNotFoundException("회원을 찾을 수 없습니다: " + memberId));
 
-        // 회원의 댓글 목록 조회 (삭제되지 않은 댓글만)
+        // 회원의 댓글 목록 조회 (삭제되지 않은 요약본에서 삭제되지 않은 댓글만)
         Page<Comment> commentPage = commentRepository.findByMemberAndDeletedFalseWithSummary(member, pageable);
 
         // 응답 객체 생성
@@ -320,8 +327,9 @@ public class MemberService {
 //    }
 
     @Transactional
-    public MemberProfileResponse getMemberProfile(final Long memberId){
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new MemberNotFoundException("사용자를 찾을 수 없습니다."));
+    public MemberProfileResponse getMemberProfile(final Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new MemberNotFoundException("사용자를 찾을 수 없습니다."));
         String[] interests = getInterests(memberId);
         Long summaryPostCount = summaryRepository.countByMemberId(memberId);
         Long summaryLikeCount = summaryLikeRepository.countByMemberId(memberId);

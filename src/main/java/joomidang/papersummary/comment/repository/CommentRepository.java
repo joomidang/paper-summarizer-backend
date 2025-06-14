@@ -24,7 +24,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findChildrenByParentIds(@Param("parentIds") List<Long> parentIds);
 
     @Query(value = "SELECT c FROM Comment c JOIN FETCH c.member m JOIN FETCH c.summary s WHERE c.member =:member "
-            + "AND c.isDeleted = false ORDER BY c.createdAt DESC",
+            + "AND s.isDeleted = false "
+            + "AND c.isDeleted = false "
+            + "ORDER BY c.createdAt DESC",
             countQuery = "SELECT COUNT(c) FROM Comment c WHERE c.member =:member AND c.isDeleted = false")
     Page<Comment> findByMemberAndDeletedFalseWithSummary(@Param("member") Member member, Pageable pageable);
 

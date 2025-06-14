@@ -6,17 +6,21 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.security.JwtTokenProvider;
 import joomidang.papersummary.common.controller.response.ApiResponse;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
-import joomidang.papersummary.member.controller.response.*;
 import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
+import joomidang.papersummary.member.controller.response.CreateProfileResponse;
+import joomidang.papersummary.member.controller.response.MemberCommentResponse;
+import joomidang.papersummary.member.controller.response.MemberInterestResponse;
+import joomidang.papersummary.member.controller.response.MemberProfileResponse;
+import joomidang.papersummary.member.controller.response.MemberSuccessCode;
+import joomidang.papersummary.member.controller.response.MemberSummaryResponse;
+import joomidang.papersummary.member.controller.response.ProfileImageResponse;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.service.MemberService;
-import joomidang.papersummary.paper.exception.AccessDeniedException;
 import joomidang.papersummary.s3.service.S3Service;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.service.SummaryLikeService;
@@ -27,8 +31,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
@@ -46,6 +57,7 @@ public class MemberController {
 
     /**
      * 회원가입 이후 프로필 생성
+     *
      * @param request
      * @return
      */
@@ -56,26 +68,10 @@ public class MemberController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(description = "닉네임 중복", responseCode = "409", content = @Content(examples = @ExampleObject(value = "{\"code\": \"MEM-0003\", \"message\": \"이미 사용 중인 닉네임입니다.\"}")))
     @PutMapping("/me/profile")
     public ResponseEntity<ApiResponse<CreateProfileResponse>> createProfile(
-            @Valid @RequestBody ProfileCreateRequest request, Authentication authentication, HttpServletRequest httpRequest) {
-
-        // providerUid로 고쳐야 하는데 언제 고치지
-        // 토큰에서 사용자 정보 확인
-        String token = httpRequest.getHeader("Authorization");
-        if (token != null) {
-            String userIdFromToken = tokenProvider.getUserId(token);
-            String authName = authentication.getName();
-            log.info("토큰조회 userId={} name={}", userIdFromToken, authName);
-            if (!authName.equals(userIdFromToken)) {
-                log.debug("JWT 토큰의 사용자와 인증된 사용자가 일치하지 않습니다. JWT: {}, Auth: {}",
-                        userIdFromToken, authName);
-                throw new AccessDeniedException("인증 사용자와 토큰 사용자가 일치하지 않습니다");
-            }
-        }
-
-        String providerUid = authentication.getName();
+            @Valid @RequestBody ProfileCreateRequest request, @Authenticated String providerUid) {
         Member authenticatedMember = memberService.findByProviderUid(providerUid);
         Long memberId = authenticatedMember.getId();
-        log.info("프로필 생성 요청: userId={}, providerUid={} request={}", memberId, providerUid,request);
+        log.info("프로필 생성 요청: userId={}, providerUid={} request={}", memberId, providerUid, request);
 
         // 프로필 생성
         Member member = memberService.createProfile(memberId, request);
@@ -90,7 +86,7 @@ public class MemberController {
     /**
      * 사용자 프로필 수정
      *
-     * @param request 수정할 프로필 정보 (선택적 필드)
+     * @param request     수정할 프로필 정보 (선택적 필드)
      * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
      * @return 수정된 프로필 정보가 포함된 ApiResponse를 담은 ResponseEntity
      */
@@ -126,7 +122,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<MemberInterestResponse>> getInterests(
             @Parameter(hidden = true)
             @Authenticated String providerUid
-    ){
+    ) {
         log.debug("provierUid={}", providerUid);
         Long memberId = memberService.findByProviderUid(providerUid).getId();
         String[] interests = memberService.getInterests(memberId);
@@ -138,8 +134,8 @@ public class MemberController {
      * 인증된 사용자가 작성한 요약 목록을 조회
      *
      * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
-     * @param page 페이지 번호 (기본값: 1)
-     * @param size 페이지 크기 (기본값: 10)
+     * @param page        페이지 번호 (기본값: 1)
+     * @param size        페이지 크기 (기본값: 10)
      * @return 페이지네이션된 요약 목록 데이터가 포함된 ApiResponse를 담은 ResponseEntity
      */
     @Operation(summary = "사용자 작성 요약 목록 조회", description = "인증된 사용자가 작성한 요약 목록을 페이지네이션으로 조회합니다.")
@@ -151,7 +147,7 @@ public class MemberController {
             @RequestParam(required = false, defaultValue = "1") int page,
             @Parameter(description = "페이지 크기")
             @RequestParam(required = false, defaultValue = "10") int size
-    ){
+    ) {
         log.debug("사용자 요약 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
         Long memberId = memberService.findByProviderUid(providerUid).getId();
         MemberSummaryResponse summaries = memberService.getSummaries(memberId, page, size);
@@ -175,7 +171,7 @@ public class MemberController {
             @RequestParam(required = false, defaultValue = "1") int page,
             @Parameter(description = "페이지 크기")
             @RequestParam(required = false, defaultValue = "10") int size
-    ){
+    ) {
         log.debug("사용자가 작성한 댓글 모두 조회: providerUid={}, page={}, size={}", providerUid, page, size);
         Long memberId = memberService.findByProviderUid(providerUid).getId();
         MemberCommentResponse comments = memberService.getComments(memberId, page, size);
@@ -185,7 +181,7 @@ public class MemberController {
     /**
      * 사용자 프로필 이미지 업로드
      *
-     * @param file 업로드할 프로필 이미지 파일
+     * @param file        업로드할 프로필 이미지 파일
      * @param providerUid 인증 제공자가 제공한 인증된 사용자의 고유 식별자
      * @return 업로드된 이미지 URL이 포함된 ApiResponse를 담은 ResponseEntity
      */
@@ -200,7 +196,8 @@ public class MemberController {
             @Parameter(hidden = true)
             @Authenticated String providerUid
     ) {
-        log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(), file.getSize() / 1024);
+        log.info("프로필 이미지 업로드 요청: providerUid={}, 파일명={}, 크기={}KB", providerUid, file.getOriginalFilename(),
+                file.getSize() / 1024);
 
         // 이미지 업로드 및 처리
         String imageUrl = s3Service.uploadProfileImage(file);
@@ -220,6 +217,7 @@ public class MemberController {
 
     /**
      * 좋아요한 요약 목록 조회
+     *
      * @param providerUid
      * @param page
      * @param size
@@ -234,10 +232,12 @@ public class MemberController {
             @RequestParam(required = false, defaultValue = "1") int page,
             @Parameter(description = "페이지 크기")
             @RequestParam(required = false, defaultValue = "10") int size
-    ){
+    ) {
         log.info("좋아요한 글 목록 조회: providerUid={}, page={}, size={}", providerUid, page, size);
 
-        if (page > 0) page = page - 1;
+        if (page > 0) {
+            page = page - 1;
+        }
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         // 좋아요한 요약 목록 조회
@@ -248,6 +248,7 @@ public class MemberController {
 
     /**
      * 사용자 본인 프로필 조회
+     *
      * @param providerUid
      * @return
      */
@@ -255,7 +256,7 @@ public class MemberController {
     public ResponseEntity<ApiResponse<MemberProfileResponse>> getMyProfile(
             @Parameter(hidden = true)
             @Authenticated String providerUid
-    ){
+    ) {
         log.info("사용자 본인 프로필 조회 요청: providerUid={}", providerUid);
         Long memberId = memberService.findByProviderUid(providerUid).getId();
         MemberProfileResponse response = memberService.getMemberProfile(memberId);
@@ -264,6 +265,7 @@ public class MemberController {
 
     /**
      * 다른사용자 프로필 조회
+     *
      * @param providerUid
      * @param userId
      * @return
@@ -273,7 +275,7 @@ public class MemberController {
             @Parameter(hidden = true)
             @Authenticated String providerUid,
             @PathVariable Long userId
-    ){
+    ) {
         log.info("다른 사용자 프로필 조회 요청: providerUid={}", providerUid);
         MemberProfileResponse response = memberService.getMemberProfile(userId);
         return ResponseEntity.ok(ApiResponse.successWithData(MemberSuccessCode.MEMBER_INFO, response));

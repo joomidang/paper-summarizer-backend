@@ -555,7 +555,7 @@ class CommentServiceTest {
     // =================== getCommentsByMember 테스트 ===================
 
     @Test
-    @DisplayName("사용자 댓글 조회 성공 테스트")
+    @DisplayName("사용자 댓글 조회 성공 테스트 - 삭제되지 않은 요약본의 삭제되지 않은 댓글만 조회")
     void getCommentsByMemberSuccess() {
         // given
         String providerUid = "test-provider-uid";
@@ -578,7 +578,7 @@ class CommentServiceTest {
     }
 
     @Test
-    @DisplayName("사용자 댓글이 없는 경우 조회 테스트")
+    @DisplayName("사용자 댓글이 없는 경우 조회 테스트 - 삭제되지 않은 요약본의 삭제되지 않은 댓글만 조회")
     void getCommentsByMemberEmpty() {
         // given
         String providerUid = "test-provider-uid";
