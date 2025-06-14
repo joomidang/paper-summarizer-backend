@@ -137,15 +137,14 @@ public class CommentService {
                     comment.getId(), comment.getChildren().size());
 
             // 각 자식 댓글에 대해 재귀적으로 삭제 처리
-            comment.getChildren().forEach((childComment) -> {
-                softDeleteCommentAndChildren(childComment);
-                statsEventPublisher.publish(comment.getSummary().getId(), StatsType.UNCOMMENT);
-            });
+            comment.getChildren().forEach(this::softDeleteCommentAndChildren);
             log.debug("대댓글 삭제 완료: 부모 commentId={}", comment.getId());
         }
 
         // 마지막으로 현재 댓글 삭제
         comment.softDelete();
+        statsEventPublisher.publish(comment.getSummary().getId(), StatsType.UNCOMMENT);
+        log.debug("댓글 삭제 이벤트 발행: commentId={}", comment.getId());
     }
 
     /**
