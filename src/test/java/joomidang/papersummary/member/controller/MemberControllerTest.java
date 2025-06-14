@@ -2,6 +2,7 @@
 package joomidang.papersummary.member.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import joomidang.papersummary.auth.resolver.Authenticated;
 import joomidang.papersummary.auth.security.JwtTokenProvider;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
 import joomidang.papersummary.member.controller.response.MemberSuccessCode;
@@ -14,6 +15,11 @@ import joomidang.papersummary.summary.controller.response.AuthorResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryListResponse;
 import joomidang.papersummary.summary.controller.response.LikedSummaryResponse;
 import joomidang.papersummary.summary.service.SummaryLikeService;
+import org.springframework.core.MethodParameter;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -72,11 +78,31 @@ class MemberControllerTest {
     private final int PAGE = 0;
     private final int SIZE = 10;
 
+    /**
+     * 테스트용 인증 어노테이션 리졸버 X-AUTH-ID 헤더에서 사용자 ID를 추출하여 @Authenticated 어노테이션이 붙은 파라미터에 주입
+     */
+    static class TestAuthenticatedArgumentResolver implements HandlerMethodArgumentResolver {
+
+        @Override
+        public boolean supportsParameter(MethodParameter parameter) {
+            return parameter.hasParameterAnnotation(Authenticated.class);
+        }
+
+        @Override
+        public Object resolveArgument(MethodParameter parameter,
+                                      ModelAndViewContainer mavContainer,
+                                      NativeWebRequest webRequest,
+                                      WebDataBinderFactory binderFactory) {
+            return webRequest.getHeader("X-AUTH-ID");
+        }
+    }
+
     @BeforeEach
     void setUp() {
         // MockMvc 설정
         mockMvc = MockMvcBuilders.standaloneSetup(memberController)
                 .setControllerAdvice(new MemberExceptionHandler())
+                .setCustomArgumentResolvers(new TestAuthenticatedArgumentResolver())
                 .build();
 
         // 테스트용 회원 정보 생성
@@ -103,8 +129,6 @@ class MemberControllerTest {
     @DisplayName("프로필 생성 API 성공 테스트")
     void createProfileSuccessTest() throws Exception {
         // Given
-        when(authentication.getName()).thenReturn(TEST_USER_ID);
-        when(tokenProvider.getUserId(anyString())).thenReturn(TEST_USER_ID);
         when(memberService.findByProviderUid(TEST_USER_ID)).thenReturn(testMember);
         when(memberService.createProfile(anyLong(), any(ProfileCreateRequest.class))).thenReturn(testMember);
 
@@ -112,6 +136,7 @@ class MemberControllerTest {
         mockMvc.perform(put("/api/users/me/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Bearer fake-token")
+                        .header("X-AUTH-ID", TEST_USER_ID)
                         .content(objectMapper.writeValueAsString(validRequest))
                         .principal(authentication))
                 .andExpect(status().isOk())
@@ -164,8 +189,6 @@ class MemberControllerTest {
     @DisplayName("중복된 닉네임으로 프로필 생성 시 409 응답")
     void createProfileDuplicateUsernameTest() throws Exception {
         // Given
-        when(authentication.getName()).thenReturn(TEST_USER_ID);
-        when(tokenProvider.getUserId(anyString())).thenReturn(TEST_USER_ID);
         when(memberService.findByProviderUid(TEST_USER_ID)).thenReturn(testMember);
         doThrow(new MemberDuplicateException("이미 사용 중인 닉네임입니다."))
                 .when(memberService).createProfile(anyLong(), any(ProfileCreateRequest.class));
@@ -174,6 +197,7 @@ class MemberControllerTest {
         mockMvc.perform(put("/api/users/me/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Bearer fake-token")
+                        .header("X-AUTH-ID", TEST_USER_ID)
                         .content(objectMapper.writeValueAsString(validRequest))
                         .principal(authentication))
                 .andExpect(status().isConflict())
@@ -202,7 +226,7 @@ class MemberControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/users/me/interests")
-                        .param("providerUid", providerUid)
+                        .header("X-AUTH-ID", providerUid)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("MEM-0002"))
@@ -217,13 +241,13 @@ class MemberControllerTest {
     @Test
     @DisplayName("사용자 댓글 목록 조회 API 성공 테스트")
     void getCommentsSuccessTest() throws Exception {
-        when(authentication.getName()).thenReturn(TEST_USER_ID);
         when(memberService.findByProviderUid(any())).thenReturn(testMember);
 
         mockMvc.perform(get("/api/users/me/comments")
                         .param("page", String.valueOf(PAGE))
                         .param("size", String.valueOf(SIZE))
                         .header("Authorization", TEST_TOKEN)
+                        .header("X-AUTH-ID", TEST_USER_ID)
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_COMMENTS.getValue()))
@@ -273,6 +297,7 @@ class MemberControllerTest {
                         .param("page", "1")
                         .param("size", "10")
                         .header("Authorization", TEST_TOKEN)
+                        .header("X-AUTH-ID", TEST_USER_ID)
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
@@ -329,6 +354,7 @@ class MemberControllerTest {
                         .param("page", "2")
                         .param("size", "10")
                         .header("Authorization", TEST_TOKEN)
+                        .header("X-AUTH-ID", TEST_USER_ID)
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(MemberSuccessCode.MEMBER_LIKED_SUMMARIES.getValue()))
