@@ -124,7 +124,6 @@ public class CommentService {
         // 댓글과 모든 대댓글을 삭제
         softDeleteCommentAndChildren(comment);
 
-        statsEventPublisher.publish(comment.getSummary().getId(), StatsType.UNCOMMENT);
         log.info("댓글 삭제 완료: commentId={}", commentId);
     }
 
@@ -134,12 +133,12 @@ public class CommentService {
     private void softDeleteCommentAndChildren(Comment comment) {
         // 먼저 자식 댓글들을 삭제
         if (!comment.getChildren().isEmpty()) {
-            log.debug("대댓글 삭제 시작: 부모 commentId={}, 대댓글 수={}", 
+            log.debug("대댓글 삭제 시작: 부모 commentId={}, 대댓글 수={}",
                     comment.getId(), comment.getChildren().size());
 
             // 각 자식 댓글에 대해 재귀적으로 삭제 처리
             comment.getChildren().forEach(this::softDeleteCommentAndChildren);
-
+            statsEventPublisher.publish(comment.getSummary().getId(), StatsType.UNCOMMENT);
             log.debug("대댓글 삭제 완료: 부모 commentId={}", comment.getId());
         }
 
