@@ -371,6 +371,72 @@ class CommentServiceTest {
 
         // then
         verify(commentRepository, times(1)).findById(commentId);
+        // 댓글이 삭제되었는지 확인
+        assert(parentComment.isDeleted());
+    }
+
+    @Test
+    @DisplayName("부모 댓글 삭제 시 대댓글도 함께 삭제되는지 테스트")
+    void deleteCommentWithChildrenSuccess() {
+        // given
+        String providerUid = "test-provider-uid";
+        Long commentId = 1L;
+
+        // 부모 댓글과 자식 댓글 설정
+        Comment parent = Comment.builder()
+                .id(1L)
+                .content("Parent comment")
+                .summary(publishedSummary)
+                .member(testMember)
+                .build();
+
+        Comment child1 = Comment.builder()
+                .id(2L)
+                .content("Child comment 1")
+                .summary(publishedSummary)
+                .member(testMember)
+                .parent(parent)
+                .build();
+
+        Comment child2 = Comment.builder()
+                .id(3L)
+                .content("Child comment 2")
+                .summary(publishedSummary)
+                .member(testMember)
+                .parent(parent)
+                .build();
+
+        // 자식 댓글의 자식 댓글 (손자 댓글)
+        Comment grandchild = Comment.builder()
+                .id(4L)
+                .content("Grandchild comment")
+                .summary(publishedSummary)
+                .member(testMember)
+                .parent(child1)
+                .build();
+
+        // 부모-자식 관계 설정
+        parent.getChildren().add(child1);
+        parent.getChildren().add(child2);
+        child1.getChildren().add(grandchild);
+
+        when(commentRepository.findById(commentId)).thenReturn(Optional.of(parent));
+
+        // when
+        commentService.deleteComment(providerUid, commentId);
+
+        // then
+        verify(commentRepository, times(1)).findById(commentId);
+
+        // 부모 댓글이 삭제되었는지 확인
+        assert(parent.isDeleted());
+
+        // 모든 자식 댓글이 삭제되었는지 확인
+        assert(child1.isDeleted());
+        assert(child2.isDeleted());
+
+        // 손자 댓글도 삭제되었는지 확인
+        assert(grandchild.isDeleted());
     }
 
     @Test
