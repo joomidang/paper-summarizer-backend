@@ -150,12 +150,16 @@ public class ElasticsearchSummaryService {
      */
     private SummaryResponse mapToSummaryResponse(SummaryDocument doc) {
         log.debug("검색 결과 매핑: id={}, summaryId={}", doc.getId(), doc.getSummaryId());
+
+        // 작성자 정보 조회
+        String[] authorInfo = getAuthorInfo(doc.getSummaryId());
+
         return new SummaryResponse(
                 doc.getSummaryId(),
                 doc.getTitle(),
                 doc.getBrief(),
-                null, // authorName - 필요시 추가
-                null, // authorProfileImage - 필요시 추가
+                authorInfo[0], // authorName
+                authorInfo[1], // authorProfileImage
                 doc.getCreatedAt(),
                 doc.getPublishedAt(),
                 doc.getViewCount(),
@@ -163,6 +167,25 @@ public class ElasticsearchSummaryService {
                 0,    // commentCount - 필요시 추가
                 0.0   // popularityScore - 필요시 추가
         );
+    }
+
+    private String[] getAuthorInfo(Long summaryId) {
+        try {
+            Summary summary = summaryRepository.findById(summaryId)
+                    .orElse(null);
+
+            if (summary != null && summary.getMember() != null) {
+                return new String[]{
+                        summary.getMember().getName(),
+                        summary.getMember().getProfileImage()
+                };
+            }
+        } catch (Exception e) {
+            log.warn("작성자 정보 조회 실패: summaryId={}, error={}", summaryId, e.getMessage());
+        }
+
+        // 기본값 반환
+        return new String[]{"Unknown", null};
     }
 
     /**
@@ -272,8 +295,8 @@ public class ElasticsearchSummaryService {
                         summary.getId(),
                         summary.getTitle(),
                         summary.getBrief(),
-                        null, // 작성자 정보 생략
-                        null, // 프로필 이미지 생략
+                        summary.getMember() != null ? summary.getMember().getName() : "Unknown", // 작성자 이름
+                        summary.getMember() != null ? summary.getMember().getProfileImage() : null, // 프로필 이미지
                         summary.getCreatedAt(),
                         summary.getUpdatedAt(),
                         0, // 조회수 생략
