@@ -14,6 +14,5 @@ endif::[]
 :docinfo: shared-head
 
 include::common/overview.adoc[]
-include::sample/sample.adoc[]
 include::auth/auth.adoc[]
 include::paper/paper.adoc[]
