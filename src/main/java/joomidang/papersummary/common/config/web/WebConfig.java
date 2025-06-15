@@ -5,6 +5,7 @@ import joomidang.papersummary.auth.resolver.AuthenticatedArgumentResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -17,16 +18,15 @@ public class WebConfig implements WebMvcConfigurer {
         resolvers.add(authenticatedArgumentResolver);
     }
 
-/*    @Override
+    @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
                 .allowedOrigins(
-                        "http://localhost:3000",
                         "https://paper-summarizer-frontend.vercel.app"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
-    }*/
+    }
 }
