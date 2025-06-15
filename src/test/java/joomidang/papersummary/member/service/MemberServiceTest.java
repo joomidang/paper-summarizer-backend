@@ -1,6 +1,21 @@
 package joomidang.papersummary.member.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import joomidang.papersummary.member.controller.request.ProfileCreateRequest;
+import joomidang.papersummary.member.controller.request.UpdateProfileRequest;
 import joomidang.papersummary.member.entity.AuthProvider;
 import joomidang.papersummary.member.entity.Member;
 import joomidang.papersummary.member.entity.MemberInterest;
@@ -16,18 +31,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -71,7 +74,7 @@ class MemberServiceTest {
     void createProfileSuccess() {
         // Given
         when(memberRepository.findById(anyLong())).thenReturn(Optional.of(testMember));
-        when(memberRepository.existsByNameAndId(anyString(), anyLong())).thenReturn(false);
+        when(memberRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(false);
         when(memberRepository.save(any(Member.class))).thenReturn(testMember);
 
         // When
@@ -118,7 +121,7 @@ class MemberServiceTest {
     void checkExistingUsernameDuplicateTest() {
         // Given
         Long memberId = 1L;
-        doReturn(true).when(memberRepository).existsByNameAndId("DuplicateUsername", memberId);
+        doReturn(true).when(memberRepository).existsByNameAndIdNot("DuplicateUsername", memberId);
 
         // When & Then
         assertThatThrownBy(() -> memberService.validateUsernameDuplicate("DuplicateUsername", memberId))
@@ -126,13 +129,12 @@ class MemberServiceTest {
                 .hasMessage("이미 사용 중인 닉네임입니다.");
     }
 
-
     @Test
     @DisplayName("관심분야 저장 테스트")
     void saveInterests() {
         // Given
         when(memberRepository.findById(anyLong())).thenReturn(Optional.of(testMember));
-        when(memberRepository.existsByNameAndId(anyString(), anyLong())).thenReturn(false);
+        when(memberRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(false);
         when(memberRepository.save(any(Member.class))).thenReturn(testMember);
 
         // 관심분야 저장 모의 객체 설정
@@ -156,7 +158,6 @@ class MemberServiceTest {
         // given
         Long memberId = 1L;
 
-
         List<MemberInterest> memberInterests = Arrays.asList(
                 MemberInterest.of(testMember, "AI"),
                 MemberInterest.of(testMember, "Machine Learning"),
@@ -171,5 +172,49 @@ class MemberServiceTest {
         // then
         assertThat(result).hasSize(3);
         assertThat(result).containsExactly("AI", "Machine Learning", "Data Science");
+    }
+
+    @Test
+    @DisplayName("프로필 수정 - 닉네임은 그대로 두고 다른 정보만 수정 성공")
+    void updateProfile_KeepUsernameUpdateOtherInfo() {
+        // Given
+        String providerUid = "test-user-local";
+        String originalUsername = "TestUser";
+        String originalProfileImage = "https://example.com/image.jpg";
+        String newProfileImage = "https://example.com/new-image.jpg";
+        List<String> newInterests = Arrays.asList("Data Science", "NLP");
+
+        // 닉네임은 null로 설정하여 변경하지 않음
+        UpdateProfileRequest request = UpdateProfileRequest.builder()
+                .username(originalUsername)
+                .profileImageUrl(newProfileImage)
+                .interests(newInterests)
+                .build();
+
+        // 회원 조회 모의 설정
+        when(memberRepository.findByProviderUid(providerUid)).thenReturn(Optional.of(testMember));
+        when(memberRepository.save(any(Member.class))).thenReturn(testMember);
+
+        // 관심분야 저장 모의 설정
+        List<MemberInterest> savedInterests = Arrays.asList(
+                MemberInterest.of(testMember, "Data Science"),
+                MemberInterest.of(testMember, "NLP")
+        );
+        when(memberInterestRepository.saveAll(any())).thenReturn(savedInterests);
+
+        // When
+        Member result = memberService.updateProfile(providerUid, request);
+
+        // Then
+        // 닉네임은 변경되지 않았는지 확인
+        assertThat(result.getName()).isEqualTo(originalUsername);
+        // 프로필 이미지는 변경되었는지 확인
+        assertThat(result.getProfileImage()).isEqualTo(newProfileImage);
+
+        // 메서드 호출 검증
+        verify(memberRepository, times(1)).findByProviderUid(providerUid);
+        verify(memberInterestRepository, times(1)).deleteByMember(testMember);
+        verify(memberInterestRepository, times(1)).saveAll(any());
+        verify(memberRepository, times(1)).save(testMember);
     }
 }

@@ -29,7 +29,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByProviderUid(String providerUid);
 
     boolean existsByName(String name);
-    boolean existsByNameAndId(String name, Long id);
-    Optional<Member> findByName(String name);
 
+    /**
+     * 특정 ID를 제외하고 해당 이름을 가진 회원이 존재하는지 확인 프로필 수정 시 본인을 제외한 닉네임 중복 검사에 사용
+     */
+    boolean existsByNameAndIdNot(String username, Long memberId);
 }
