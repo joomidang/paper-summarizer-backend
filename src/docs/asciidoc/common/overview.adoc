@@ -1,0 +1,49 @@
+[[overview]]
+== Overview
+
+[[overview-http-status-codes]]
+=== HTTP Status Codes
+
+|===
+| 상태 코드 | 설명
+
+| `200 OK`
+| 요청이 성공적으로 처리되었습니다.
+
+| `201 Created`
+| 새 리소스가 성공적으로 생성되었습니다.
+
+| `400 Bad Request`
+| 잘못된 요청입니다.
+
+| `401 Unauthorized`
+| 인증이 필요합니다.
+
+| `403 Forbidden`
+| 권한이 없습니다.
+
+| `404 Not Found`
+| 리소스를 찾을 수 없습니다.
+
+| `500 Internal Server Error`
+| 서버 오류가 발생했습니다.
+|===
+
+[[overview-success-code]]
+=== Success Codes
+
+|===
+| 값 | 설명
+
+|===
+
+[[overview-error-code]]
+=== Error Codes
+
+|===
+| 값 | 설명
+
+| IA-0001
+| 서버 애플리케이션에 예기치 못한 예외가 발생했습니다.
+|===
+

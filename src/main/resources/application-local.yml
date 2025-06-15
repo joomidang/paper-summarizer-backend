@@ -1,0 +1,91 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MYSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:test-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:test-client-secret}
+            redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:3000/callback}
+            scope:
+              - user:email
+              - read:user
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000
+      connect-timeout: 3000
+
+
+jwt:
+  secret: ${JWT_SECRET:5uZXzQjRhWvbeqgYF7dBtPAMrNzLDm2qSgJ8p9WXfUZoV1gxhELTuQeKM3vRDY1BfNpHyC74AZaUwVXt}
+  access-token-validity-in-seconds: 86400 # 24 hours
+  refresh-token-validity-in-seconds: 604800 # 7 days
+
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    summary-bucket-name: ${AWS_S3_SUMMARY_BUCKET_NAME}
+  region: ${AWS_REGION}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY}
+
+logging:
+  config: classpath:logback/logback-local.xml
+  level:
+    joomidang.papersummary: trace #필요시 info, trace
+    org.hibernate.sql: debug #SQL 쿼리 로깅
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+    doc-expansion: none
+  api-docs:
+    path: /api-docs
+  paths-to-match:
+    - /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json

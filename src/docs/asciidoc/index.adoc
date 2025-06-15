@@ -1,0 +1,19 @@
+ifndef::snippets[]
+:snippets: ../../build/generated-snippets
+endif::[]
+= GPT 기반 AI 논문 요약 및 시각화 플랫폼 API 문서
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 2
+:sectlinks:
+ifndef::docinfodir[]
+:docinfodir: ./common
+endif::[]
+:docinfo: shared-head
+
+include::common/overview.adoc[]
+include::sample/sample.adoc[]
+include::auth/auth.adoc[]
+include::paper/paper.adoc[]

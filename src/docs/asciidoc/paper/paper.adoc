@@ -1,0 +1,23 @@
+[[paper-api]]
+== Paper API
+
+[[upload-paper]]
+=== 논문 업로드
+
+`POST /api/papers` 요청을 통해 사용자가 논문 파일을 올립니다.
+
+operation::paper-controller-documentation/upload-paper[]
+
+[[analyze-paper]]
+=== 논문 분석
+
+`POST /api/papers/{paperId}/analyze` 요청을 통해 사용자 논문 분석을 요청합니다.
+
+operation::paper-analysis-controller-documentation/analyze-paper[]
+
+[[paper-parsing-callback]]
+=== 논문 파싱 콜백
+
+`POST /api/papers/{paperId}/callback` 요청을 파싱 서버에서 보내면 파싱 결과를 처리한다.
+
+operation::paper-parsing-callback-controller-documentation/receive-parsing-callback[]

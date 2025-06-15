@@ -1,0 +1,85 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${CLIENT_ID_GITHUB}
+            client-secret: ${CLIENT_SECRET_GITHUB}
+            redirect-uri: ${REDIRECT_URI_GITHUB:http://localhost:8080/api/auth/github/callback}
+            scope:
+              - user:email
+              - read:user
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URI}
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:3000}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:3000}
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-in-seconds: 86400 # 24 hours
+  refresh-token-validity-in-seconds: 604800 # 7 days
+
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    summary-bucket-name: ${AWS_S3_SUMMARY_BUCKET_NAME}
+  region: ${AWS_REGION}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+mineru:
+  parsing-url: ${MINERU_PARSING_URL}
+
+huggingface:
+  api:
+    key: ${HUGGINGFACE_API_KEY}
+
+logging:
+  config: classpath:logback/logback-dev.xml
+  level:
+    joomidang.papersummary: trace
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+    display-request-duration: true
+    doc-expansion: none
+  api-docs:
+    path: /api-docs
+  paths-to-match:
+    - /api/**
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
