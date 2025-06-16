@@ -49,7 +49,7 @@ jobs:
         run: |
           echo "Target Branch -> ${{ github.base_ref }}"
           echo "environment=dev" >> $GITHUB_OUTPUT
-          
+
           if [[ ${{ github.base_ref }} == "main" ]]; then
             echo "environment=prod" >> $GITHUB_OUTPUT
           fi
@@ -114,60 +114,66 @@ jobs:
           port: 22
           script: |
             cd ~/project
-            
+
             # create .env file
             cat <<EOF > .env
             # springboot-app environment
             SPRINGBOOT_APP_IMAGE_REPOSITORY=${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}
             SPRINGBOOT_APP_IMAGE_TAG=${{ github.sha }}
             ENVIRONMENT=${{ matrix.environment }}
-            
+
             # mysql environment
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_URL=${{ secrets.DB_URL }}
-            
+
             # JWT & OAuth 환경 변수
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             GITHUB_CLIENT_ID=${{ secrets.CLIENT_ID_GITHUB }}
             GITHUB_CLIENT_SECRET=${{ secrets.CLIENT_SECRET_GITHUB }}
             GITHUB_REDIRECT_URI=${{ secrets.REDIRECT_URI_GITHUB }}
-            
+
             # AWS
             AWS_S3_BUCKET_NAME=${{secrets.AWS_S3_BUCKET_NAME}}
             AWS_S3_SUMMARY_BUCKET_NAME=${{secrets.AWS_S3_SUMMARY_BUCKET_NAME}}
             AWS_REGION=${{ secrets.AWS_REGION }}
             AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
             AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
-            
+
             # RabbitMQ 환경 변수
             RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
             RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}
             RABBITMQ_USERNAME=${{ secrets.RABBITMQ_USERNAME }}
             RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
             RABBITMQ_QUEUE_NAME=${{ secrets.RABBITMQ_QUEUE_NAME }}
-            
+
             # MinerU 파싱 서버
             MINERU_PARSING_URL=${{secrets.MINERU_PARSING_URL}}
-            
+
             # Elasticsearch
             ELASTICSEARCH_URI=${{secrets.ELASTICSEARCH_URI}}
-            
+
             # HuggingFace API
             HUGGINGFACE_API_KEY=${{secrets.HUGGINGFACE_API_KEY}}
-            
+
             # Redis
             REDIS_HOST=${{secrets.REDIS_HOST}}
             REDIS_PORT=${{secrets.REDIS_PORT}}
+
+            # SSL Configuration
+            SSL_KEY_STORE=${{secrets.SSL_KEY_STORE}}
+            SSL_KEY_STORE_PASSWORD=${{secrets.SSL_KEY_STORE_PASSWORD}}
+            SSL_KEY_STORE_TYPE=${{secrets.SSL_KEY_STORE_TYPE}}
+            SSL_KEY_ALIAS=${{secrets.SSL_KEY_ALIAS}}
             # etc...
             EOF
-            
+
             # export to shell
             export AWS_REGION=${{ secrets.AWS_REGION }}
             export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            
+
             # deploy with docker
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
             sudo docker-compose stop springboot-app

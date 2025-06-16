@@ -28,7 +28,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000", // front dev
                 "http://localhost:8080", // local
-                "https://paper-summarizer-frontend.vercel.app" // product
+                "https://localhost:8080", // local with HTTPS
+                "https://paper-summarizer-frontend.vercel.app", // product frontend
+                "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com" // product backend
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
