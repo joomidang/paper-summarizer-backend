@@ -79,7 +79,7 @@ public class AuthControllerDocumentation extends RestDocsSupport {
         // then
         result.andExpect(status().isFound()) // 302 Found (Redirect)
                 .andExpect(header().exists("Set-Cookie"))
-                .andExpect(header().string("Location", "http://localhost:3000/"))
+                .andExpect(header().string("Location", "https://paper-summarizer-frontend.vercel.app/"))
                 .andDo(createDocument(
                         queryParameters(
                                 parameterWithName("code").description("깃허브 인증 코드")

@@ -117,7 +117,7 @@ public class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isFound())
-                .andExpect(header().string("Location", "http://localhost:3000/"))
+                .andExpect(header().string("Location", "https://paper-summarizer-frontend.vercel.app/"))
                 .andExpect(header().stringValues("Set-Cookie", Matchers.hasItems(
                         Matchers.containsString("accessToken=test-access-token"),
                         Matchers.containsString("refreshToken=test-refresh-token")
