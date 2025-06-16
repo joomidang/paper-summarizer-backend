@@ -34,7 +34,17 @@ public class SecurityConfig {
                 "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com"// product backend
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization", 
+                "Content-Type", 
+                "Accept", 
+                "Origin", 
+                "X-Requested-With", 
+                "Access-Control-Request-Method", 
+                "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList(
+                "Access-Control-Allow-Origin", 
+                "Access-Control-Allow-Credentials"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
