@@ -68,18 +68,18 @@ public class AuthController {
         String refreshToken = tokenDto.getRefreshToken();
 
         ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(false) //개발 환경일때는 우선 false로 설정
-                .secure(false) // true 이면 vercel의 경우만 가능 https환경에서만 동작
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
                 .path("/")
-                .sameSite("Lax") //운영 환경일때는 None으로 설정
+                .sameSite("None") //운영 환경일때는 None으로 설정
                 .maxAge(Duration.ofDays(1))
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(false) //개발 환경일때는 우선 false로 설정
-                .secure(false)
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+                .secure(true)
                 .path("/")
-                .sameSite("Lax")
+                .sameSite("None")
                 .maxAge(Duration.ofDays(7))
                 .build();
 
