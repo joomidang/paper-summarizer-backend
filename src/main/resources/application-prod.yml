@@ -7,6 +7,24 @@ server:
     key-store-type: ${SSL_KEY_STORE_TYPE:PKCS12}
     key-alias: ${SSL_KEY_ALIAS:tomcat}
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+    jpa:
+      repositories:
+        enabled: true
+
+    elasticsearch:
+      repositories:
+        enabled: false
+
+    data:
+      redis:
+        repositories:
+          enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL}

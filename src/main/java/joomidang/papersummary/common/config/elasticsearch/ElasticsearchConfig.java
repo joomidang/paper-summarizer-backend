@@ -14,9 +14,23 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @Slf4j
 @Configuration
+@EnableElasticsearchRepositories(
+        basePackages = "joomidang.papersummary.common.config.elasticsearch.repository",
+        // Elasticsearch Repository만 포함
+        includeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
+                type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
+                classes = org.springframework.data.elasticsearch.repository.ElasticsearchRepository.class
+        ),
+        // JPA Repository 및 다른 Repository 타입 제외
+        excludeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
+                type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
+                classes = org.springframework.data.jpa.repository.JpaRepository.class
+        )
+)
 public class ElasticsearchConfig {
 
     @Value("${spring.elasticsearch.uris:http://localhost:9200}")

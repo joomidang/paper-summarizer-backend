@@ -2,23 +2,17 @@ package joomidang.papersummary;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
-import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 
-@SpringBootApplication
-@EnableJpaRepositories(
-    basePackages = "joomidang.papersummary",
-    excludeFilters = @ComponentScan.Filter(
-        type = FilterType.ASSIGNABLE_TYPE,
-        classes = {
-            joomidang.papersummary.common.config.elasticsearch.repository.SummaryElasticsearchRepository.class
+@SpringBootApplication(
+        // Spring Data 자동 설정에서 Repository 스캔 제외
+        exclude = {
+                ElasticsearchRepositoriesAutoConfiguration.class,
+                ReactiveElasticsearchRepositoriesAutoConfiguration.class, // Reactive Elasticsearch 자동설정 제외
+                RedisRepositoriesAutoConfiguration.class
         }
-    )
-)
-@EnableElasticsearchRepositories(
-    basePackages = "joomidang.papersummary.common.config.elasticsearch.repository"
 )
 public class PaperSummaryApplication {
 

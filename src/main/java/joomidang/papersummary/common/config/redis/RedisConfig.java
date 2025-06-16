@@ -23,7 +23,25 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @EnableCaching
-@EnableRedisRepositories(basePackages = {})
+@EnableRedisRepositories(
+        basePackages = {}, // Redis Repository가 있다면 여기에 패키지 명시
+        // 빈 배열로 두어 Redis Repository 스캔하지 않음
+        includeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
+                type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
+                classes = org.springframework.data.keyvalue.repository.KeyValueRepository.class
+        ),
+        // JPA Repository 및 다른 Repository 타입 제외
+        excludeFilters = {
+                @org.springframework.context.annotation.ComponentScan.Filter(
+                        type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
+                        classes = org.springframework.data.jpa.repository.JpaRepository.class
+                ),
+                @org.springframework.context.annotation.ComponentScan.Filter(
+                        type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
+                        classes = org.springframework.data.elasticsearch.repository.ElasticsearchRepository.class
+                )
+        }
+)
 public class RedisConfig {
 
     /**
