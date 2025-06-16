@@ -20,7 +20,7 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
 @Configuration
 @EnableElasticsearchRepositories(
         basePackages = "joomidang.papersummary.common.config.elasticsearch.repository",
-        // Elasticsearch Repository만 포함
+        // Elasticsearch Repository만 포함.
         includeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
                 type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
                 classes = org.springframework.data.elasticsearch.repository.ElasticsearchRepository.class
