@@ -52,7 +52,7 @@ public class RedisConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule()); // LocalDateTime 지원 추가
 
-        // 타입 정보 직렬화 비활성화
+        // 타입 정보 직렬화 비활성화함
         objectMapper.deactivateDefaultTyping();
 
         objectMapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
