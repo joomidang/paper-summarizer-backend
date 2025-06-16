@@ -1,4 +1,23 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+    jpa:
+      repositories:
+        enabled: true
+
+    elasticsearch:
+      repositories:
+        enabled: false
+
+    data:
+      redis:
+        repositories:
+          enabled: false
+
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MYSQL
     driver-class-name: org.h2.Driver
