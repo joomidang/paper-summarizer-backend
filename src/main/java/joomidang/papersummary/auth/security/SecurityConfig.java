@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,8 +31,7 @@ public class SecurityConfig {
                 "http://localhost:8080", // local
                 "https://localhost:8080", // local with HTTPS
                 "https://paper-summarizer-frontend.vercel.app", // product frontend
-                "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com", // product backend
-                "*"
+                "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com"// product backend
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
@@ -54,12 +54,14 @@ public class SecurityConfig {
                         session ->
                                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // OPTIONS 요청을 명시적으로 허용
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/docs/**",
                                 "/api/summaries/{summaryId}",
                                 "/api/summaries/popular",
                                 "/api/summaries/search",
                                 "/api/papers/*/callback",
-                                "/api/papers/*/events",//TODO: 실제 개발 환경 아닐때는 이거 지우기 쿠키 방식으로 인증하도록
+                                "/api/papers/*/events",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
@@ -85,7 +87,6 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(tokenProvider),
                         UsernamePasswordAuthenticationFilter.class);
 
-        // H2 console frame 허용
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 
         return http.build();
