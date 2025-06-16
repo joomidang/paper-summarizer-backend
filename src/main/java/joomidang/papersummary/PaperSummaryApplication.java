@@ -11,7 +11,7 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication(
-        // Spring Data 자동 설정에서 Repository 스캔 제외
+        // Spring Data 자동 설정에서 Repository 스캔 제외함.
         exclude = {
                 ElasticsearchRepositoriesAutoConfiguration.class,
                 ReactiveElasticsearchRepositoriesAutoConfiguration.class, // Reactive Elasticsearch 자동설정 제외
