@@ -47,10 +47,13 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "Github 인증 페이지로 리다이렉트")
     })
     @GetMapping("/github")
-    public ResponseEntity<ApiResponse<Void>> githubLogin() {
+    public ResponseEntity<Map<String, String>> githubLogin() {
         log.info("깃허브 로그인 요청");
         String redirectUrl = authService.getAuthorizationUrl(AuthProvider.GITHUB);
-        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+//        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+        // JSON 응답으로 변경
+        return ResponseEntity.ok()
+                .body(Map.of("authUrl", redirectUrl));
     }
 
 
