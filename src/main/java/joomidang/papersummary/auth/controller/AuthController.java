@@ -47,13 +47,11 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "Github 인증 페이지로 리다이렉트")
     })
     @GetMapping("/github")
-    public ResponseEntity<Map<String, String>> githubLogin() {
+    public ResponseEntity<Void> githubLogin(HttpServletResponse response) {
         log.info("깃허브 로그인 요청");
         String redirectUrl = authService.getAuthorizationUrl(AuthProvider.GITHUB);
-//        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
-        // JSON 응답으로 변경
-        return ResponseEntity.ok()
-                .body(Map.of("authUrl", redirectUrl));
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+
     }
 
 
@@ -62,8 +60,8 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "인증 성공 후 메인 페이지로 리다이렉트")
     })
     @GetMapping("/github/callback")
-    public ResponseEntity<Map<String, String>>githubCallback(String code, HttpServletResponse response)
-//    public void githubCallback(String code, HttpServletResponse response)
+//    public ResponseEntity<Map<String, String>>githubCallback(String code, HttpServletResponse response)
+    public void githubCallback(String code, HttpServletResponse response)
             throws IOException {
         log.info("깃허브 콜백 받음. 코드는: {}", code);
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
@@ -85,14 +83,21 @@ public class AuthController {
                 .sameSite("None")
                 .maxAge(Duration.ofDays(7))
                 .build();
+        // 쿠키를 응답에 추가
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+        log.info("인증 성공! 프론트엔드로 리다이렉트합니다.");
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(Map.of("message", "인증 성공"));
+        // ✅ 이 한 줄이 핵심! JSON 응답 대신 리다이렉트
+        response.sendRedirect("https://paper-summarizer-frontend.vercel.app/");
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
+//        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+//        return ResponseEntity.ok()
+//                .headers(headers)
+//                .body(Map.of("message", "인증 성공"));
+
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다")
