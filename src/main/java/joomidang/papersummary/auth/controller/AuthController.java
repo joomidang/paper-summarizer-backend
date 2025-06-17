@@ -59,7 +59,7 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "인증 성공 후 메인 페이지로 리다이렉트")
     })
     @GetMapping("/github/callback")
-    public ResponseEntity<Void> githubCallback(String code, HttpServletResponse response)
+    public ResponseEntity<Map<String, String>>githubCallback(String code, HttpServletResponse response)
 //    public void githubCallback(String code, HttpServletResponse response)
             throws IOException {
         log.info("깃허브 콜백 받음. 코드는: {}", code);
@@ -83,10 +83,13 @@ public class AuthController {
                 .maxAge(Duration.ofDays(7))
                 .build();
 
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .header("Set-Cookie", accessCookie.toString())
-                .header("Set-Cookie", refreshCookie.toString())
-                .build();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(Map.of("message", "인증 성공"));
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다")
