@@ -31,7 +31,8 @@ public class SecurityConfig {
                 "http://localhost:8080", // local
                 "https://localhost:8080", // local with HTTPS
                 "https://paper-summarizer-frontend.vercel.app", // product frontend
-                "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com"// product backend
+                "https://ec2-43-202-9-100.ap-northeast-2.compute.amazonaws.com",
+                "https://paper-dev-test-magic-pdf-output.s3.ap-northeast-2.amazonaws.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList(
