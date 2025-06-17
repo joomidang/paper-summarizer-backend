@@ -60,7 +60,8 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "인증 성공 후 메인 페이지로 리다이렉트")
     })
     @GetMapping("/github/callback")
-    public void githubCallback(String code, HttpServletResponse response)
+    public ResponseEntity<Void> githubCallback(String code, HttpServletResponse response)
+//    public void githubCallback(String code, HttpServletResponse response)
             throws IOException {
         log.info("깃허브 콜백 받음. 코드는: {}", code);
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
@@ -84,10 +85,16 @@ public class AuthController {
                 .build();
 
         // 쿠키 추가
-        response.addHeader("Set-Cookie", accessCookie.toString());
-        response.addHeader("Set-Cookie", refreshCookie.toString());
+//        response.addHeader("Set-Cookie", accessCookie.toString());
+//        response.addHeader("Set-Cookie", refreshCookie.toString());
+//
+//        response.sendRedirect("https://paper-summarizer-frontend.vercel.app/");
 
-        response.sendRedirect("https://paper-summarizer-frontend.vercel.app/");
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create("https://paper-summarizer-frontend.vercel.app/"))
+                .header("Set-Cookie", accessCookie.toString())
+                .header("Set-Cookie", refreshCookie.toString())
+                .build();
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다")
