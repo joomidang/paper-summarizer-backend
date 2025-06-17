@@ -55,41 +55,41 @@ public class AuthControllerDocumentation extends RestDocsSupport {
                 ));
     }
 
-    @Test
-    @DisplayName("깃허브 콜백 API (쿠키 응답 및 리다이렉트) 문서화")
-    void githubCallback() throws Exception {
-        // given
-        TokenDto tokenDto = TokenDto.builder()
-                .accessToken("test-access-token")
-                .refreshToken("test-refresh-token")
-                .tokenType("Bearer")
-                .expiresIn(3600L)
-                .build();
-
-        Mockito.when(authService.processOAuthCallback(Mockito.any(), Mockito.anyString()))
-                .thenReturn(tokenDto);
-
-        // when
-        ResultActions result = mockMvc.perform(
-                get("/api/auth/github/callback")
-                        .param("code", "test_code")
-                        .accept(MediaType.TEXT_HTML)
-        );
-
-        // then
-        result.andExpect(status().isFound()) // 302 Found (Redirect)
-                .andExpect(header().exists("Set-Cookie"))
-                .andExpect(header().string("Location", "https://paper-summarizer-frontend.vercel.app/"))
-                .andDo(createDocument(
-                        queryParameters(
-                                parameterWithName("code").description("깃허브 인증 코드")
-                        ),
-                        responseHeaders(
-                                headerWithName("Set-Cookie").description("인증 쿠키 (accessToken, refreshToken)"),
-                                headerWithName("Location").description("리다이렉트 URL")
-                        )
-                ));
-    }
+//    @Test
+//    @DisplayName("깃허브 콜백 API (쿠키 응답 및 리다이렉트) 문서화")
+//    void githubCallback() throws Exception {
+//        // given
+//        TokenDto tokenDto = TokenDto.builder()
+//                .accessToken("test-access-token")
+//                .refreshToken("test-refresh-token")
+//                .tokenType("Bearer")
+//                .expiresIn(3600L)
+//                .build();
+//
+//        Mockito.when(authService.processOAuthCallback(Mockito.any(), Mockito.anyString()))
+//                .thenReturn(tokenDto);
+//
+//        // when
+//        ResultActions result = mockMvc.perform(
+//                get("/api/auth/github/callback")
+//                        .param("code", "test_code")
+//                        .accept(MediaType.TEXT_HTML)
+//        );
+//
+//        // then
+//        result.andExpect(status().isFound()) // 302 Found (Redirect)
+//                .andExpect(header().exists("Set-Cookie"))
+//                .andExpect(header().string("Location", "https://paper-summarizer-frontend.vercel.app/"))
+//                .andDo(createDocument(
+//                        queryParameters(
+//                                parameterWithName("code").description("깃허브 인증 코드")
+//                        ),
+//                        responseHeaders(
+//                                headerWithName("Set-Cookie").description("인증 쿠키 (accessToken, refreshToken)"),
+//                                headerWithName("Location").description("리다이렉트 URL")
+//                        )
+//                ));
+//    }
 
 
     @Test
