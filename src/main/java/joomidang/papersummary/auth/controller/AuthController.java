@@ -32,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 @RestController
@@ -67,37 +68,36 @@ public class AuthController {
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
         String accessToken = tokenDto.getAccessToken();
         String refreshToken = tokenDto.getRefreshToken();
+//        String redirectUrl = "https://paper-summarizer-frontend.vercel.app/";
+        String redirectUrl = UriComponentsBuilder
+                .fromUriString("https://paper-summarizer-frontend.vercel.app/callback")
+                .queryParam("access_token", accessToken)
+                .queryParam("refresh_token", refreshToken)
+                .encode()
+                .build()
+                .toUriString();
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(true) //개발 환경일때는 우선 false로 설정
-                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
-                .path("/")
-                .sameSite("None") //운영 환경일때는 None으로 설정
-                .maxAge(Duration.ofDays(1))
-                .build();
-
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true) //개발 환경일때는 우선 false로 설정
-                .secure(true)
-                .path("/")
-                .sameSite("None")
-                .maxAge(Duration.ofDays(7))
-                .build();
-        // 쿠키를 응답에 추가
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+//        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
+//                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+//                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
+//                .path("/")
+//                .sameSite("None") //운영 환경일때는 None으로 설정
+//                .maxAge(Duration.ofDays(1))
+//                .build();
+//
+//        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+//                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+//                .secure(true)
+//                .path("/")
+//                .sameSite("None")
+//                .maxAge(Duration.ofDays(7))
+//                .build();
+//        // 쿠키를 응답에 추가
+//        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+//        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         log.info("인증 성공! 프론트엔드로 리다이렉트합니다.");
-
-        // ✅ 이 한 줄이 핵심! JSON 응답 대신 리다이렉트
-        response.sendRedirect("https://paper-summarizer-frontend.vercel.app/");
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
-//        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-//        return ResponseEntity.ok()
-//                .headers(headers)
-//                .body(Map.of("message", "인증 성공"));
-
+        response.sendRedirect(redirectUrl);
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다")
