@@ -68,33 +68,27 @@ public class AuthController {
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
         String accessToken = tokenDto.getAccessToken();
         String refreshToken = tokenDto.getRefreshToken();
-//        String redirectUrl = "https://paper-summarizer-frontend.vercel.app/";
-        String redirectUrl = UriComponentsBuilder
-                .fromUriString("https://paper-summarizer-frontend.vercel.app/callback")
-                .queryParam("access_token", accessToken)
-                .queryParam("refresh_token", refreshToken)
-                .encode()
-                .build()
-                .toUriString();
+        String redirectUrl = "https://paper-summarizer-frontend.vercel.app/callback";
 
-//        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
-//                .httpOnly(true) //개발 환경일때는 우선 false로 설정
-//                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
-//                .path("/")
-//                .sameSite("None") //운영 환경일때는 None으로 설정
-//                .maxAge(Duration.ofDays(1))
-//                .build();
-//
-//        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
-//                .httpOnly(true) //개발 환경일때는 우선 false로 설정
-//                .secure(true)
-//                .path("/")
-//                .sameSite("None")
-//                .maxAge(Duration.ofDays(7))
-//                .build();
-//        // 쿠키를 응답에 추가
-//        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
-//        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
+                .path("/")
+                .sameSite("None") //운영 환경일때는 None으로 설정
+                .maxAge(Duration.ofDays(1))
+                .build();
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+                .secure(true)
+                .path("/")
+                .sameSite("None")
+                .maxAge(Duration.ofDays(7))
+                .build();
+        // 쿠키를 응답에 추가
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         log.info("인증 성공! 토큰과 함께 프론트엔드로 리다이렉트: {}", redirectUrl);
         response.sendRedirect(redirectUrl);
