@@ -24,15 +24,11 @@ import joomidang.papersummary.common.swagger.ApiResponseSchema;
 import joomidang.papersummary.member.entity.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -84,14 +80,8 @@ public class AuthController {
                 .maxAge(Duration.ofDays(7))
                 .build();
 
-        // 쿠키 추가
-//        response.addHeader("Set-Cookie", accessCookie.toString());
-//        response.addHeader("Set-Cookie", refreshCookie.toString());
-//
-//        response.sendRedirect("https://paper-summarizer-frontend.vercel.app/");
-
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("https://paper-summarizer-frontend.vercel.app/"))
+                .location(URI.create("https://paper-summarizer-frontend.vercel.app/callback"))
                 .header("Set-Cookie", accessCookie.toString())
                 .header("Set-Cookie", refreshCookie.toString())
                 .build();
