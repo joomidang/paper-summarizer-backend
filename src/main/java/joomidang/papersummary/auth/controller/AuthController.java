@@ -96,7 +96,7 @@ public class AuthController {
 //        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
 //        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-        log.info("인증 성공! 프론트엔드로 리다이렉트합니다.");
+        log.info("인증 성공! 토큰과 함께 프론트엔드로 리다이렉트: {}", redirectUrl);
         response.sendRedirect(redirectUrl);
     }
 
