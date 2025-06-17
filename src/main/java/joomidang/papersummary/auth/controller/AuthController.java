@@ -68,7 +68,7 @@ public class AuthController {
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
         String accessToken = tokenDto.getAccessToken();
         String refreshToken = tokenDto.getRefreshToken();
-        String redirectUrl = "https://paper-summarizer-frontend.vercel.app/callback";
+        String redirectUrl = "https://paper-summarizer-frontend.vercel.app/";
 
 
         ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
