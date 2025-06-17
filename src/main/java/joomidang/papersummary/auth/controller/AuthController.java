@@ -14,6 +14,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 import joomidang.papersummary.auth.controller.request.TokenRefreshRequest;
 import joomidang.papersummary.auth.controller.request.WithdrawRequest;
 import joomidang.papersummary.auth.dto.TokenDto;
@@ -44,10 +47,13 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "Github 인증 페이지로 리다이렉트")
     })
     @GetMapping("/github")
-    public ResponseEntity<ApiResponse<Void>> githubLogin() {
-        log.info("깃허브 로그인 요청");
+    public ResponseEntity<Map<String, String>> githubLogin() {
+        log.info("깃허브 로그인 URL 요청");
         String redirectUrl = authService.getAuthorizationUrl(AuthProvider.GITHUB);
-        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+
+        Map<String, String> response = new HashMap<>();
+        response.put("authUrl", redirectUrl);
+        return ResponseEntity.ok(response);
     }
 
 
@@ -81,7 +87,6 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("https://paper-summarizer-frontend.vercel.app/callback"))
                 .header("Set-Cookie", accessCookie.toString())
                 .header("Set-Cookie", refreshCookie.toString())
                 .build();
