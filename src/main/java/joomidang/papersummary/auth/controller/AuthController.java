@@ -14,6 +14,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
 import joomidang.papersummary.auth.controller.request.TokenRefreshRequest;
 import joomidang.papersummary.auth.controller.request.WithdrawRequest;
 import joomidang.papersummary.auth.dto.TokenDto;
@@ -81,7 +84,6 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("https://paper-summarizer-frontend.vercel.app/callback"))
                 .header("Set-Cookie", accessCookie.toString())
                 .header("Set-Cookie", refreshCookie.toString())
                 .build();
