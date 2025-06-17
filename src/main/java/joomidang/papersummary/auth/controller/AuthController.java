@@ -56,32 +56,35 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "인증 성공 후 메인 페이지로 리다이렉트")
     })
     @GetMapping("/github/callback")
+    public ResponseEntity<Void> githubCallback(String code, HttpServletResponse response)
 //    public void githubCallback(String code, HttpServletResponse response)
-    public ResponseEntity<Void> githubCallback(@RequestParam String code) {
+            throws IOException {
+        log.info("깃허브 콜백 받음. 코드는: {}", code);
         TokenDto tokenDto = authService.processOAuthCallback(AuthProvider.GITHUB, code);
+        String accessToken = tokenDto.getAccessToken();
+        String refreshToken = tokenDto.getRefreshToken();
 
-        ResponseCookie accessCookie = ResponseCookie.from("accessToken", tokenDto.getAccessToken())
-                .httpOnly(true)
-                .secure(true)
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
+                .secure(true) // true 이면 vercel의 경우만 가능 https환경에서만 동작
                 .path("/")
-                .sameSite("None")
+                .sameSite("None") //운영 환경일때는 None으로 설정
                 .maxAge(Duration.ofDays(1))
                 .build();
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", tokenDto.getRefreshToken())
-                .httpOnly(true)
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true) //개발 환경일때는 우선 false로 설정
                 .secure(true)
                 .path("/")
                 .sameSite("None")
                 .maxAge(Duration.ofDays(7))
                 .build();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, accessCookie.toString());
-        headers.add(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-        headers.setLocation(URI.create("https://paper-summarizer-frontend.vercel.app/"));
-
-        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create("https://paper-summarizer-frontend.vercel.app/callback"))
+                .header("Set-Cookie", accessCookie.toString())
+                .header("Set-Cookie", refreshCookie.toString())
+                .build();
     }
 
     @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용하여 액세스 토큰을 갱신합니다")
